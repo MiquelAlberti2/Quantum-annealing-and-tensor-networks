@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def plot_diagram_from_matrix(m):
-    print('************************************')
     l = max(m.shape[0], m.shape[1])
     node_positions = {}
     for (i,j), w in np.ndenumerate(m):
