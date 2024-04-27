@@ -14,7 +14,7 @@ from numpy import linalg as LA
 import matplotlib.pyplot as plt
 
 from ncon import ncon
-from doDMRG_MPO import doDMRG_MPO 
+from module import doDMRG_MPO 
 
 ##### Example 1: XX model #############
 #######################################
@@ -37,12 +37,16 @@ sX = np.array([[0, 1], [1, 0]])
 sY = np.array([[0, -1j], [1j, 0]])
 sZ = np.array([[1, 0], [0,-1]])
 sI = np.array([[1, 0], [0, 1]])
-M = np.zeros([4,4,chid,chid]);
-M[0,0,:,:] = sI; M[3,3,:,:] = sI
-M[0,1,:,:] = sM; M[1,3,:,:] = sP
-M[0,2,:,:] = sP; M[2,3,:,:] = sM
+M_ind = np.zeros([4,4,chid,chid])
+M_ind[0,0,:,:] = sI; M_ind[3,3,:,:] = sI
+M_ind[0,1,:,:] = sM; M_ind[1,3,:,:] = sP
+M_ind[0,2,:,:] = sP; M_ind[2,3,:,:] = sM
+
+# Dummy MPO boundary matrices
 ML = np.array([1,0,0,0]).reshape(4,1,1) #left MPO boundary
 MR = np.array([0,0,0,1]).reshape(4,1,1) #right MPO boundary
+
+M = [M_ind for x in range(Nsites)]
 
 #### Initialize MPS tensors
 A = [0 for x in range(Nsites)]

@@ -1,10 +1,14 @@
 import numpy as np
 
 def from_ham_coeff(N, J_coeffs, h_coeffs, s):
-    """Construct an MPO from a Hamiltonian with short and long range 2 body interactions.
+    """
+    Construct an MPO from a annealing Hamiltonian for QUBO problems
 
     Args:
-        ham (Hamiltonian): Hamiltonian to be converted to an MPO.
+        N: number of qubits
+        J_coeffs: coefficients of the long range interactions
+        h_coeffs: coefficients of the short range interactions
+        s: transverse field strength
 
     Raises:
         NotImplementedError: Type of Hamiltonian not supported.
@@ -54,7 +58,10 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
                 a_list[k-1][0, m-1] = s*J_coeffs[k-1,N-m+1]*z_matrix
                 a_list[k-1][m-1, m-1] = i_matrix
 
+    '''
     a_list[0] = a_list[0][0, :] # other rows are used to propagate information of previous tensors, does not make sense to keep them
     a_list[-1] = a_list[-1][:, -1] # other columns are used to propagate information to the next tensors, does not make sense to keep them
 
+    We don't need this bc the implementation uses dummy boundary matrices
+    '''
     return a_list
