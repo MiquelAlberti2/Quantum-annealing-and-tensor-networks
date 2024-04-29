@@ -48,7 +48,6 @@ Optional arguments:
 
         MPS[p] = utemp.reshape(chil,chid,chir)
         MPS[p+1] = ncon([np.diag(stemp) @ vhtemp,MPS[p+1]], [[-1,1],[1,-2,-3]])/LA.norm(stemp)
-
         L[p+1] = ncon([L[p],M[p],MPS[p],np.conj(MPS[p])],[[2,1,4],[2,-1,3,5],[4,5,-3],[1,3,-2]])
     
     chil = MPS[Nsites-1].shape[0]
