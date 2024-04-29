@@ -38,7 +38,7 @@ class QKP_Hamiltonian:
         if not self.items_in_sol:
             raise Exception('Call run method first')
 
-        print('Solution has items: ', self.items_in_sol)
+        print(' - Solution has items: ', self.items_in_sol)
 
         value = 0
         weight = 0
@@ -48,6 +48,28 @@ class QKP_Hamiltonian:
             weight += self.wt[i]
 
         pairs = list(combinations(self.items_in_sol,2))
+        for p in pairs:
+            value += self.val[max(p[0], p[1])][min(p[0], p[1])]
+
+        energy = - value - 0.9603*(self.W - weight) + 0.0371*(self.W - weight)**2
+
+        print(f'Profit: {value}')
+        if weight <= self.W:
+            print(f'Weight: {weight} (satisfies constraint W={self.W})')
+        else:
+            print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
+        print(f'Energy: {energy}')
+
+    def energy_of_items(self, items):
+        print(' - Evaluating candidate ', items)
+        value = 0
+        weight = 0
+
+        for i in items:
+            value += self.val[i][i]
+            weight += self.wt[i]
+
+        pairs = list(combinations(items,2))
         for p in pairs:
             value += self.val[max(p[0], p[1])][min(p[0], p[1])]
 

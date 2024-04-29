@@ -52,7 +52,7 @@ class Dynamic_Programming_QKP_solver:
 		if not self.items_in_sol:
 			raise Exception('Call run method first')
 		
-		print('Solution has items: ', self.items_in_sol)
+		print(' - Solution has items: ', self.items_in_sol)
 
 		value = 0
 		weight = 0
