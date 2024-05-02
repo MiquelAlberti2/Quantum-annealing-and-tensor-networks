@@ -2,10 +2,12 @@ import dimod
 from neal import SimulatedAnnealingSampler
 from itertools import combinations
 import numpy as np
+import matplotlib.pyplot as plt
 from qibo.backends import matrices
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian, AbstractHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
 from qibo.hamiltonians.models import multikron
+from qibo import callbacks, hamiltonians, models
 
 
 class QKP_Hamiltonian:
@@ -37,19 +39,21 @@ class QKP_Hamiltonian:
 
         self.offset = H_dict[2]
 
-        terms = []
+        print('offset: ', self.offset)
+
+        Id = np.array([[1,0],[0,1]])
+        Z = np.array([[1,0],[0,-1]])
+
+        ham = np.zeros((2**self.N, 2**self.N))
 
         for i in range(self.N):
-            terms.append(HamiltonianTerm(h_coeffs[i]*matrices.Z, i))
-
-        m = multikron([matrices.Z, matrices.Z])
+            ham += h_coeffs[i]*multikron(Z if k==i else Id for k in range(self.N))
 
         for i in range(self.N):
             for j in range(i+1, self.N):
-                terms.append(HamiltonianTerm(J_coeffs[i, j]*m, i, j))
+                ham += J_coeffs[i,j]*multikron(Z if (k==i or k==j) else Id for k in range(self.N))
 
-        self.H_target = SymbolicHamiltonian()
-        self.H_target.terms = terms
+        self.H_target = Hamiltonian(self.N, ham)
 
     def run_simulated_annealing_neal(self):
         sampleset = SimulatedAnnealingSampler().sample(self.model, num_reads=1000)
@@ -60,10 +64,59 @@ class QKP_Hamiltonian:
 
         return self.items_in_sol
     
-    def run_simulated_annealing_qibo(self):
+    def eigenvalues(self):
+        return self.H_target.eigenvalues()
+    
+    def ham_matrix(self):
+        return self.H_target.matrix
+    
+    def run_simulated_annealing_qibo(self, T = 50):
+        '''
+        T (float): Total time of the adiabatic evolution.
+        '''
         
+        H_init = hamiltonians.X(self.N)
+        bac = self.H_target.backend
 
-        return self.items_in_sol
+        # Calculate target values (H_target ground state)
+        target_state = self.H_target.ground_state()
+        target_energy = bac.to_numpy(self.H_target.eigenvalues()[0]).real
+        print(target_energy)
+
+        # Check ground state
+        state_energy = bac.to_numpy(self.H_target.expectation(target_state)).real
+        np.testing.assert_allclose(state_energy.real, target_energy)
+
+        '''
+        dt (float): Time step used for integration.
+        solver (str): Solver used for integration.
+        '''
+        dt = 1e-1
+        solver = "exp"
+
+        energy = callbacks.Energy(self.H_target)
+        overlap = callbacks.Overlap(target_state)
+        evolution = models.AdiabaticEvolution(
+            H_init, self.H_target, lambda t: t, dt=dt, solver=solver, callbacks=[energy, overlap]
+        )
+        final_psi = evolution(final_time=T)
+
+        # Plots
+        tt = np.linspace(0, T, int(T / dt) + 1)
+        plt.figure(figsize=(12, 4))
+        plt.subplot(121)
+        plt.plot(tt, energy[:], linewidth=2.0, label="Evolved state")
+        plt.axhline(y=target_energy, color="red", linewidth=2.0, label="Ground state")
+        plt.xlabel("$t$")
+        plt.ylabel("$H_1$")
+        plt.legend()
+
+        plt.subplot(122)
+        plt.plot(tt, overlap[:], linewidth=2.0)
+        plt.xlabel("$t$")
+        plt.ylabel("Overlap")
+
+        return final_psi
 
     def convert_to_MPO(self):
         pass
