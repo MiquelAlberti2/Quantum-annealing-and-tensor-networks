@@ -1,6 +1,12 @@
 import dimod
 from neal import SimulatedAnnealingSampler
 from itertools import combinations
+import numpy as np
+from qibo.backends import matrices
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians.terms import HamiltonianTerm
+from qibo.hamiltonians.models import multikron
+
 
 class QKP_Hamiltonian:
     def __init__(self, W, wt, val):
@@ -20,14 +26,42 @@ class QKP_Hamiltonian:
 
         # Convert to Ising model (spin variables)
         self.model = dimod.BinaryQuadraticModel(cost.linear, cost.quadratic, cost.offset, vartype='BINARY')
-        self.H_dict = self.model.to_ising()
+        H_dict = self.model.to_ising()
 
-    def run_simulated_annealing(self):
+        h_coeffs = [H_dict[0][site] for site in range(self.N)] # H[0] contains linear interactions
+
+        J_coeffs = np.zeros((self.N,self.N))
+        for term in H_dict[1]: # quadratic interacions
+            # TODO in formulation i>j, but in MPO i<j (triangular superior, la meitat buida)
+            J_coeffs[min(term[0], term[1]), max(term[0], term[1])] = H_dict[1][term]
+
+        self.offset = H_dict[2]
+
+        terms = []
+
+        for i in range(self.N):
+            terms.append(HamiltonianTerm(h_coeffs[i]*matrices.Z, i))
+
+        m = multikron([matrices.Z, matrices.Z])
+
+        for i in range(self.N):
+            for j in range(i+1, self.N):
+                terms.append(HamiltonianTerm(J_coeffs[i, j]*m, i, j))
+
+        self.H_target = SymbolicHamiltonian()
+        self.H_target.terms = terms
+
+    def run_simulated_annealing_neal(self):
         sampleset = SimulatedAnnealingSampler().sample(self.model, num_reads=1000)
         self.items_in_sol = []
         for key in sampleset.first.sample:
             if sampleset.first.sample[key] == 1:
                 self.items_in_sol.append(key)
+
+        return self.items_in_sol
+    
+    def run_simulated_annealing_qibo(self):
+        
 
         return self.items_in_sol
 
@@ -81,3 +115,6 @@ class QKP_Hamiltonian:
         else:
             print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
         print(f'Energy: {energy}')
+
+    def impose_penalty_to_state():
+        pass
