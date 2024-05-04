@@ -19,6 +19,8 @@ def easy_test():
 
     return N, values, weights, W_capacity
 
+# --------------------------------------------------------
+
 def random_test(N):
     values = [[0] * (i+1) for i in range(N)]
 

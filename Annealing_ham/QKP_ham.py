@@ -4,11 +4,12 @@ from itertools import combinations
 import numpy as np
 import matplotlib.pyplot as plt
 from qibo.backends import matrices
-from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian, AbstractHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
 from qibo.hamiltonians.models import multikron
 from qibo import callbacks, hamiltonians, models
 
+from qibo.symbols import Z, X
+from qibo import hamiltonians
 
 class QKP_Hamiltonian:
     def __init__(self, W, wt, val):
@@ -54,7 +55,18 @@ class QKP_Hamiltonian:
             for j in range(i+1, self.N):
                 ham += self.J_coeffs[i,j]*multikron(Z if (k==i or k==j) else Id for k in range(self.N))
 
-        self.H_target = Hamiltonian(self.N, ham)
+        self.H_target = hamiltonians.Hamiltonian(self.N, ham)
+
+    def build_qibo_Hamiltonian(self):
+
+        def S(i): # spin variable
+            return (1-Z(i))/2
+
+        ham = - sum(self.val[i][j] * S(i) * S(j) for i in range(self.N) for j in range (i+1)) # values
+        ham -= 0.9603*(self.W - sum(self.wt[i] * S(i) for i in range(self.N)))
+        ham += 0.0371*(self.W - sum(self.wt[i] * S(i) for i in range(self.N)))**2
+
+        self.H_target = hamiltonians.SymbolicHamiltonian(ham)
 
     def run_simulated_annealing_neal(self):
         sampleset = SimulatedAnnealingSampler().sample(self.model, num_reads=1000)
@@ -79,14 +91,15 @@ class QKP_Hamiltonian:
         T (float): Total time of the adiabatic evolution.
         '''
         
-        H_init = hamiltonians.X(self.N)
+        ham = sum(X(i) for i in range(self.N))
+        H_init = hamiltonians.SymbolicHamiltonian(ham)
+
         bac = self.H_target.backend
 
         # Calculate target values (H_target ground state)
         target_state = self.H_target.ground_state()
         target_energy = bac.to_numpy(self.H_target.eigenvalues()[0]).real
         print('Target energy', target_energy)
-        print('Target energy with offset', target_energy + self.offset)
 
         # Check ground state
         state_energy = bac.to_numpy(self.H_target.expectation(target_state)).real
