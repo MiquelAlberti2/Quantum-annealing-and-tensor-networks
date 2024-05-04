@@ -16,9 +16,7 @@ class QKP_DMRG:
         self.chi = chi # set bond dimension
         self.OPTS_numsweeps = numsweeps # number of DMRG sweeps
 
-        self.J = J_coeffs
-        self.h = h_coeffs
-        self.offset = offset
+        
 
         self.OPTS_dispon = 2 # level of output display
         self.OPTS_updateon = True # level of output display
@@ -95,10 +93,13 @@ class QKP_DMRG:
             [[1, 2, 3], [1, 4, 5], [2, 4, 6], [3, 6, 5]],
         )
 
-        print(f'Energy: {S_left + self.offset}')
+        print(f'Energy: {S_left}')
+        print(f'+ offset ({self.offset}) = {S_left+self.offset}')
 
     def show_results(self):
         print('Energy: ', self.solution_energy)
+
+        ''' està hardcodead per N=3
 
         # contract the MPS to get the state
         E = ncon(self.solution_MPS, [[-1,-2,1],[1,-3,2],[2,-4,-5]])
@@ -116,7 +117,7 @@ class QKP_DMRG:
                         max_item = f'{i}{j}{k}'
                         max_amplitud = abs(bulk_E[i,j,k])
 
-        print('Solution: ', max_item)
+        print('Solution: ', max_item)'''
 
         
 
