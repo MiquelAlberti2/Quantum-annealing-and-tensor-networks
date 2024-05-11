@@ -90,7 +90,8 @@ Optional arguments:
             R[p] = ncon([M[p+1],R[p+1],MPS_B[p+1],np.conj(MPS_B[p+1])],[[-1,2,3,5],[2,1,4],[-3,5,4],[-2,3,1]])
             
             if dispon == 2:
-                print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
+                pass
+                # print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
         
         ###### left boundary tensor
         chil = MPS[0].shape[0]; chir = MPS[0].shape[2]
@@ -121,7 +122,8 @@ Optional arguments:
         
             ##### display energy
             if dispon == 2:
-                print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
+                pass
+                # print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
                 
         ###### right boundary tensor
         chil = MPS_B[Nsites-1].shape[0]

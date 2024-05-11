@@ -1,25 +1,23 @@
+from overrides import override
 import numpy as np
 import matplotlib.pyplot as plt
 from qibo import callbacks, hamiltonians, models
 from qibo.symbols import Z, X
 from qibo import hamiltonians
 
+from solver import Solver
 
-class QKP_Qibo_solver:
+class Qibo_annealing_solver(Solver):
     def __init__(self, W, wt, val):
-        self.W = W # Weight capacity
-        self.wt = wt # array containing the weights of each item
-        self.val = val # array containing the profit of each pair of items
-        self.N = len(wt) # total number of items
+        super().__init__(W, wt, val)
 
-        def S(i): # spin variable
-            return (1-Z(i))/2
-
-        ham = - sum(self.val[i][j] * S(i) * S(j) for i in range(self.N) for j in range (i+1)) # values
-        ham -= 0.9603*(self.W - sum(self.wt[i] * S(i) for i in range(self.N)))
-        ham += 0.0371*(self.W - sum(self.wt[i] * S(i) for i in range(self.N)))**2
+        ham = sum(self.H_dict[0][term] * Z(term) for term in self.H_dict[0]) # lineal terms
+        ham += sum(self.H_dict[1][term] * Z(term[0]) * Z(term[1]) for term in self.H_dict[1]) # quadratic terms
 
         self.h1 = hamiltonians.SymbolicHamiltonian(ham)
+
+    def get_ham(self):
+        return self.h1
 
     def eigenvalues(self):
         return self.h1.eigenvalues()
@@ -33,9 +31,10 @@ class QKP_Qibo_solver:
     def ham_matrix(self):
         return self.h1.matrix
 
-    def run_simulated_annealing(self, T = 50):
+    @override
+    def run(self, time = 50):
         '''
-        T (float): Total time of the adiabatic evolution.
+        time (float): Total time of the adiabatic evolution.
         '''
         
         ham = sum(X(i) for i in range(self.N))
@@ -47,6 +46,7 @@ class QKP_Qibo_solver:
         target_state = self.h1.ground_state()
         target_energy = bac.to_numpy(self.h1.eigenvalues()[0]).real
         print('Target energy', target_energy)
+        print(f'+ offset ({self.offset}) = {target_energy + self.offset}')
 
         # Check ground state
         state_energy = bac.to_numpy(self.h1.expectation(target_state)).real
@@ -64,12 +64,13 @@ class QKP_Qibo_solver:
         evolution = models.AdiabaticEvolution(
             h0, self.h1, lambda t: t, dt=dt, solver=solver, callbacks=[energy, overlap]
         )
-        self.final_psi = evolution(final_time=T)
+        self.final_psi = evolution(final_time=time)
+        self.solution_items = self.convert_state_to_items(self.final_psi)
 
         print('final annealing energy: ', energy[-1])
 
         # Plots
-        tt = np.linspace(0, T, int(T / dt) + 1)
+        tt = np.linspace(0, time, int(time / dt) + 1)
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         plt.plot(tt, energy[:], linewidth=2.0, label="Evolved state")
@@ -82,9 +83,6 @@ class QKP_Qibo_solver:
         plt.plot(tt, overlap[:], linewidth=2.0)
         plt.xlabel("$t$")
         plt.ylabel("Overlap")
-
-    def show_results(self):
-        print('Solution has items: ', self.convert_state_to_items(self.final_psi))
 
     def convert_state_to_items(self, state):
         max_i = -1
@@ -101,7 +99,7 @@ class QKP_Qibo_solver:
         # the MSB is the item 0
         items = []
         for item, b in enumerate(bin_solution):
-            if b=='1':
+            if b=='0': # due to the encoding we are using (dimod)
                 items.append(item)
 
         return items

@@ -1,0 +1,78 @@
+from abc import ABC, abstractmethod
+from itertools import combinations
+import dimod
+import numpy as np
+
+class Solver(ABC):
+    def __init__(self, W, wt, val):
+        self.W = W # Weight capacity
+        self.wt = wt # array containing the weights of each item
+        self.val = val # array containing the profit of each pair of items
+        self.N = len(wt) # total number of items
+
+        self.mult = 5 # the bigger this factor, the greater the penalization for overweight candidates,
+                 # but also the bigger the penalization for light weight candidates
+                 # and the bigger the bonus for valid candidates close to the limit
+
+        # Define cost function with binary variables
+        x = [dimod.Binary(i) for i in range(self.N)]
+
+        cost = - dimod.quicksum(self.val[i][j] * x[i] * x[j] for i in range(self.N) for j in range (i+1)) # values
+        cost -= self.mult*0.9603*(W - dimod.quicksum(wt[i] * x[i] for i in range(self.N)))
+        cost += self.mult*0.0371*(W - dimod.quicksum(wt[i] * x[i] for i in range(self.N)))**2
+
+        self.model = dimod.BinaryQuadraticModel(cost.linear, cost.quadratic, cost.offset, vartype='BINARY')
+
+        # https://docs.ocean.dwavesys.com/en/latest/docs_dimod/reference/generated/dimod.binary.BinaryQuadraticModel.to_ising.html
+        # Convert to Ising model (spin variables)
+        self.H_dict = self.model.to_ising()
+
+        # H_dict[0] contains linear interactions
+        self.h_coeffs = np.zeros((self.N))
+        for site in self.H_dict[0]:
+            self.h_coeffs[site] = self.H_dict[0][site]
+        
+        # H_dict[1] contains quadratic interactions
+        self.J_coeffs = np.zeros((self.N,self.N))
+        for term in self.H_dict[1]:
+            # TODO in formulation i>j, but in MPO i<j (triangular superior, la meitat buida)
+            self.J_coeffs[min(term[0], term[1]), max(term[0], term[1])] = self.H_dict[1][term]
+
+        self.offset = self.H_dict[2]
+
+        self.solution_items = None
+
+    @abstractmethod
+    def run(self, time):
+        pass
+
+    def show_solution(self):
+        if self.solution_items is None:
+            raise Exception('Call run method first')
+
+        print('-------- Solution has items: ', self.solution_items, '--------')
+        self.stats_of_items(self.solution_items)
+        print('-------------------------------------------------')
+
+
+    def stats_of_items(self, items):
+        print(' - Evaluating candidate ', items)
+        value = 0
+        weight = 0
+
+        for i in items:
+            value += self.val[i][i]
+            weight += self.wt[i]
+
+        pairs = list(combinations(items,2))
+        for p in pairs:
+            value += self.val[max(p[0], p[1])][min(p[0], p[1])]
+
+        energy = - value - self.mult*0.9603*(self.W - weight) + self.mult*0.0371*(self.W - weight)**2
+
+        print(f'Profit: {value}')
+        if weight <= self.W:
+            print(f'Weight: {weight} (satisfies constraint W={self.W})')
+        else:
+            print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
+        print(f'Energy: {energy}')

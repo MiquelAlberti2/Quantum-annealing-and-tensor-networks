@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
+from overrides import override
 import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
@@ -9,14 +7,16 @@ from ncon import ncon
 from DMRG.module import doDMRG_MPO 
 from DMRG.annealing_ham_to_MPO import from_ham_coeff
 
+from DMRG.samplingMPS import SamplingMPS
 
-class QKP_DMRG:
-    def __init__(self, N, chi, numsweeps, h_coeffs, J_coeffs, offset):
-        self.Nsites = N
+from solver import Solver
+
+
+class DMRG_solver(Solver):
+    def __init__(self, W, wt, val, chi):
+        super().__init__(W, wt, val)
+
         self.chi = chi # set bond dimension
-        self.OPTS_numsweeps = numsweeps # number of DMRG sweeps
-
-        
 
         self.OPTS_dispon = 2 # level of output display
         self.OPTS_updateon = True # level of output display
@@ -29,16 +29,16 @@ class QKP_DMRG:
 
         #### Initialize MPS tensors
         chid = 2 # local dimension
-        self.A = [0 for x in range(self.Nsites)]
+        self.A = [0 for x in range(self.N)]
         self.A[0] = np.random.rand(1,chid,min(chi,chid))
-        for k in range(1,self.Nsites):
-            self.A[k] = np.random.rand(self.A[k-1].shape[2],chid,min(min(chi,self.A[k-1].shape[2]*chid),chid**(self.Nsites-k-1)))
+        for k in range(1,self.N):
+            self.A[k] = np.random.rand(self.A[k-1].shape[2],chid,min(min(chi,self.A[k-1].shape[2]*chid),chid**(self.N-k-1)))
 
         self.solution_energy = None
         self.solution_MPS = None
 
     def build_MPO_time_s(self, s):
-        self.M = from_ham_coeff(self.Nsites, self.J, self.h, s)
+        self.M = from_ham_coeff(self.N, self.J_coeffs, self.h_coeffs, s)
 
         # Dummy MPO boundary matrices
         L_dim = self.M[0].shape[0]
@@ -51,15 +51,30 @@ class QKP_DMRG:
         self.MR = np.zeros((R_dim, 1, 1))
         self.MR[-1, 0, 0] = 1
 
-    def run(self):
+    @override
+    def run(self, time = 50):
+        '''
+        time (float): # number of DMRG sweeps
+        '''
         #### Do DMRG sweeps (2-site approach)
-        En1, left_MPS, sWeight, right_MPS = doDMRG_MPO(self.A, self.ML, self.M, self.MR, self.chi,
-                                        numsweeps = self.OPTS_numsweeps, dispon = self.OPTS_dispon, 
+        energies, left_MPS, sWeight, right_MPS = doDMRG_MPO(self.A, self.ML, self.M, self.MR, self.chi,
+                                        numsweeps = time, dispon = self.OPTS_dispon, 
                                         updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
                                         krydim = self.OPTS_krydim)
         
-        self.solution_energy = En1[-1] + self.offset
+        self.solution_energy = energies[-1] + self.offset
         self.solution_MPS = right_MPS
+
+        plt.plot(energies)
+        plt.xlabel('Sweeps')
+        plt.ylabel('Energy')
+        plt.show()
+
+        print(f'Solution energy = {energies[-1]} + {self.offset} (offset) = {self.solution_energy}')
+
+        samplingMPS = SamplingMPS()
+        result = samplingMPS.sampling(right_MPS, 1000)
+        print('(bit flip missing)', result)
 
     def energy_of_items(self, items):
         print(' - Evaluating candidate ', items)
@@ -68,12 +83,13 @@ class QKP_DMRG:
         aux_M[0] = aux_M[0][0, :]
         aux_M[-1] = aux_M[-1][:, -1]
 
+        # Create the MPS corresponding to the state that represents the items given
         custom_MPS = []
 
-        matrix_0 = np.array([[1, 0]])
+        matrix_0 = np.array([[0, 1]]) # dimod mapping
         reshaped_matrix_0 = matrix_0.reshape(1,2,1)
 
-        matrix_1 = np.array([[0, 1]])
+        matrix_1 = np.array([[1, 0]])
         reshaped_matrix_1 = matrix_1.reshape(1,2,1)
 
         for s in items:
@@ -82,10 +98,11 @@ class QKP_DMRG:
             elif s=='1':
                 custom_MPS.append(reshaped_matrix_1)
 
+        # Do the contraction <\psi|H|\psi> to obtain the energy
         S_left = ncon(
             [custom_MPS[0], aux_M[0], custom_MPS[0]], [[1, 2, -1], [-2, 2, 3], [1, 3, -3]]
         )
-        for i in range(1, self.Nsites - 1):
+        for i in range(1, self.N - 1):
             tensor = custom_MPS[i]
             S_left = ncon([S_left, tensor, aux_M[i], np.conj(tensor)], [[1, 2, 3], [1, 4, -1], [2, -2, 4, 5], [3, 5, -3]])
         S_left = ncon(
@@ -98,9 +115,8 @@ class QKP_DMRG:
 
     def show_results(self):
         print('Energy: ', self.solution_energy)
-
-        ''' està hardcodead per N=3
-
+        
+        # TODO this method is hardcoded for N=3
         # contract the MPS to get the state
         E = ncon(self.solution_MPS, [[-1,-2,1],[1,-3,2],[2,-4,-5]])
         bulk_E = E.reshape(2,2,2)
@@ -117,13 +133,7 @@ class QKP_DMRG:
                         max_item = f'{i}{j}{k}'
                         max_amplitud = abs(bulk_E[i,j,k])
 
-        print('Solution: ', max_item)'''
-
-        
-
-
-        
-
+        print('Solution: ', max_item)
 
 
 

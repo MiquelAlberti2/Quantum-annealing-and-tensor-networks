@@ -1,5 +1,23 @@
 import random 
 
+
+def super_easy_test():
+    N = 2
+    values = [[0] * (i+1) for i in range(N)]
+
+    # Assigning profit of each item
+    values[0][0] = 60 
+    values[1][0] = 30
+    values[1][1] = 100   
+
+    # Assigning weight of each item
+    weights = [10, 20]
+
+    W_capacity = 15
+
+    return N, values, weights, W_capacity
+
+
 def easy_test():
     N = 3
     values = [[0] * (i+1) for i in range(N)]
@@ -21,7 +39,7 @@ def easy_test():
 
 # --------------------------------------------------------
 
-def random_test(N):
+def random_test(N, mult):
     values = [[0] * (i+1) for i in range(N)]
 
     # Assigning random profit for each item
@@ -33,6 +51,6 @@ def random_test(N):
     weights = [random.randint(1, 100) for _ in range(N)]
 
     # Setting knapsack capacity
-    W_capacity = random.randint(1, 100)
+    W_capacity = random.randint(1, int(100*(N/mult)))
 
     return N, values, weights, W_capacity
