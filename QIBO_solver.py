@@ -37,7 +37,7 @@ class Qibo_annealing_solver(Solver):
         time (float): Total time of the adiabatic evolution.
         '''
         
-        ham = sum(X(i) for i in range(self.N))
+        ham = (-1)*sum(X(i) for i in range(self.N))
         h0 = hamiltonians.SymbolicHamiltonian(ham)
 
         bac = self.h1.backend
@@ -56,7 +56,7 @@ class Qibo_annealing_solver(Solver):
         dt (float): Time step used for integration.
         solver (str): Solver used for integration.
         '''
-        dt = 1e-1
+        dt = 1e-2
         solver = "exp"
 
         energy = callbacks.Energy(self.h1)

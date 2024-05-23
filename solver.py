@@ -57,6 +57,16 @@ class Solver(ABC):
 
     def stats_of_items(self, items):
         print(' - Evaluating candidate ', items)
+        value, weight, energy = self.evaluate_items(items)
+
+        print(f'Profit: {value}')
+        if weight <= self.W:
+            print(f'Weight: {weight} (satisfies constraint W={self.W})')
+        else:
+            print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
+        print(f'Energy: {energy}')
+
+    def evaluate_items(self, items):
         value = 0
         weight = 0
 
@@ -69,10 +79,4 @@ class Solver(ABC):
             value += self.val[max(p[0], p[1])][min(p[0], p[1])]
 
         energy = - value - self.mult*0.9603*(self.W - weight) + self.mult*0.0371*(self.W - weight)**2
-
-        print(f'Profit: {value}')
-        if weight <= self.W:
-            print(f'Weight: {weight} (satisfies constraint W={self.W})')
-        else:
-            print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
-        print(f'Energy: {energy}')
+        return value, weight, energy

@@ -8,7 +8,6 @@ from DMRG.module import doDMRG_MPO
 from DMRG.annealing_ham_to_MPO import from_ham_coeff
 
 from DMRG.samplingMPS import SamplingMPS
-
 from solver import Solver
 
 
@@ -37,6 +36,8 @@ class DMRG_solver(Solver):
         self.solution_energy = None
         self.solution_MPS = None
 
+        self.show_run_plots = True
+
     def build_MPO_time_s(self, s):
         self.M = from_ham_coeff(self.N, self.J_coeffs, self.h_coeffs, s)
 
@@ -44,7 +45,7 @@ class DMRG_solver(Solver):
         L_dim = self.M[0].shape[0]
         R_dim = self.M[-1].shape[2]
 
-        # Define the left MPO boundary
+        # Define the left and right MPO boundaries
         self.ML = np.zeros((L_dim, 1, 1))
         self.ML[0, 0, 0] = 1
 
@@ -62,26 +63,77 @@ class DMRG_solver(Solver):
                                         updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
                                         krydim = self.OPTS_krydim)
         
-        self.solution_energy = energies[-1] + self.offset
+        self.solution_energy = energies[-1]
         self.solution_MPS = right_MPS
 
+        if self.show_run_plots:
+            plt.plot(energies)
+            plt.xlabel('Half sweeps')
+            plt.ylabel('Energy')
+            plt.show()
+
+        print(f'Solution energy = {self.solution_energy} + {self.offset} (offset) = {self.solution_energy + self.offset}')
+
+        samplingMPS = SamplingMPS()
+        result_dict = samplingMPS.sampling(right_MPS, 1000)
+
+        # get the state that appeared the most in the sampling
+        max_state = max(result_dict, key=lambda k: result_dict[k])
+
+        self.solution_items = []
+
+        for i, ch in enumerate(max_state):
+            if ch == '0': # dimod mapping
+                self.solution_items.append(i)
+
+    def annealing_run(self, step = 10):
+
+        self.show_run_plots = False
+
+        energies = []
+
+        for s in range(step+1):
+            print(' ---- s=', s, ' ----')
+
+            self.build_MPO_time_s(s / step)
+            self.run()
+            energies.append(self.solution_energy)
+
+            print('DMRG energy: ', self.solution_energy)
+
+            # build the ham matrix to test results
+            aux_M = self.M.copy()
+
+            aux_M[0] = aux_M[0][0, :] 
+            aux_M[-1] = aux_M[-1][:, -1]
+
+            ham = aux_M[0]
+            for i in range(1, len(self.M)-1):
+                ham = ncon([ham, aux_M[i]], [[1, -2, -4], [1, -1, -3, -5]])
+                ham = ham.reshape(ham.shape[0], 2**(i+1), 2**(i+1))
+            ham = ncon([ham, aux_M[-1]], [[1, -1, -3], [1, -2, -4]])
+            ham = ham.reshape(2**self.N, 2**self.N)
+
+            # perform exact diagonalization
+            eigenvalues, eigenvectors = np.linalg.eig(ham)
+            gap = sorted(eigenvalues)[:2]
+
+            print('Real gap: ', gap)
+
+
         plt.plot(energies)
-        plt.xlabel('Sweeps')
+        plt.xlabel('step')
         plt.ylabel('Energy')
         plt.show()
 
-        print(f'Solution energy = {energies[-1]} + {self.offset} (offset) = {self.solution_energy}')
-
-        samplingMPS = SamplingMPS()
-        result = samplingMPS.sampling(right_MPS, 1000)
-        print('(bit flip missing)', result)
+        self.show_run_plots = True
 
     def energy_of_items(self, items):
         print(' - Evaluating candidate ', items)
 
-        aux_M = self.M.copy() # M with no dummy indices
+        aux_M = self.M.copy() 
         aux_M[0] = aux_M[0][0, :]
-        aux_M[-1] = aux_M[-1][:, -1]
+        aux_M[-1] = aux_M[-1][:, -1] # M with no dummy indices
 
         # Create the MPS corresponding to the state that represents the items given
         custom_MPS = []

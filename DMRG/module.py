@@ -6,31 +6,34 @@ from ncon import ncon
 
 def doDMRG_MPO(MPS,ML,M,MR,chi, numsweeps = 10, dispon = 2, updateon = True, maxit = 2, krydim = 4):
     """
-------------------------
-by Glen Evenbly (c) for www.tensors.net, (v1.1) - last modified 19/1/2019
-------------------------
-Implementation of DMRG for a 1D chain with open boundaries, using the two-site update strategy.
-Each update is accomplished using a custom implementation of the Lanczos iteration to find (an approximation to) the
-ground state of the superblock Hamiltonian.
+    ------------------------
+    by Glen Evenbly (c) for www.tensors.net, (v1.1) - last modified 19/1/2019
+    ------------------------
+    Implementation of DMRG for a 1D chain with open boundaries, using the two-site update strategy.
+    Each update is accomplished using a custom implementation of the Lanczos iteration to find (an approximation to) the
+    ground state of the superblock Hamiltonian.
 
-Input 'MPS' is containing the MPS tensors whose length is equal to that of the 1D lattice.
+    Input 'MPS' is containing the MPS tensors whose length is equal to that of the 1D lattice.
 
-The Hamiltonian is specified by an MPO
-with 'ML' and 'MR' the tensors at the left and right boundaries, and 'M' the bulk MPO tensor.
-Automatically grow the MPS bond dimension to maximum dimension 'chi'.
+    The Hamiltonian is specified by an MPO
+    with 'ML' and 'MR' the tensors at the left and right boundaries, and 'M' the bulk MPO tensor.
+    Automatically grow the MPS bond dimension to maximum dimension 'chi'.
 
-Outputs 'MPS' and 'MPS_B' are arrays of the MPS tensors in left and right orthogonal form respectively,
-while 'sWeight' is an array of the Schmidt coefficients across different lattice positions.
+    Outputs 'MPS' and 'MPS_B' are arrays of the MPS tensors in left and right orthogonal form respectively,
+    while 'sWeight' is an array of the Schmidt coefficients across different lattice positions.
 
-'Ekeep' is a vector describing the energy at each update step.
+    'Ekeep' is a vector describing the energy at each update step.
 
-Optional arguments:
-`numsweeps::Integer=10`: number of DMRG sweeps
-`dispon::Integer=2`: print data never [0], after each sweep [1], each step [2]
-`updateon::Bool=true`: enable or disable tensor updates
-`maxit::Integer=2`: number of iterations of Lanczos method for each diagonalization
-`krydim::Integer=4`: maximum dimension of Krylov space in superblock diagonalization
-"""
+    Optional arguments:
+    `numsweeps::Integer=10`: number of DMRG sweeps
+    `dispon::Integer=2`: print data never [0], after each sweep [1], each step [2]
+    `updateon::Bool=true`: enable or disable tensor updates
+    `maxit::Integer=2`: number of iterations of Lanczos method for each diagonalization
+    `krydim::Integer=4`: maximum dimension of Krylov space in superblock diagonalization
+    """
+    """
+    MODIFICATION: Make M be a list, to represent MPOs with a list of bulk M
+    """
 
     ##### left-to-right 'warmup', put MPS in right orthogonal form
     chid = M[0].shape[2] #local dimension
@@ -153,31 +156,39 @@ def eigLanczos(psivec,linFunct,functArgs, maxit = 2, krydim = 4):
     operator defined as a function"""
     
     if LA.norm(psivec) == 0:
-        psivec = np.random.rand(len(psivec))
+        psivec = np.random.rand(len(psivec)) # initial guess for the eigenvector in case it is null
     
     psi = np.zeros([len(psivec),krydim+1])
-    A = np.zeros([krydim,krydim])
+    A = np.zeros([krydim,krydim]) # stores the projected operator
     dval = 0
     
     for ik in range(maxit):
         
+        # psi is the normalized psivec
         psi[:,0] = psivec/max(LA.norm(psivec),1e-16)
+
+        # compute the updated ip-th basis vector in psi
         for ip in range(1,krydim+1):
                 
+            # apply the MPO to the state  ( \psi' = H \psi)
             psi[:,ip] = linFunct(psi[:,ip-1],*functArgs)
             
-            for ig in range(ip):
+            for ig in range(ip): # compute the projected operator
                 A[ip-1,ig] = np.dot(psi[:,ip],psi[:,ig])
                 A[ig,ip-1] = np.conj(A[ip-1,ig])
             
-            for ig in range(ip):
+            for ig in range(ip): # ensure orthogonality and normalize
                 psi[:,ip] = psi[:,ip] - np.dot(psi[:,ig],psi[:,ip])*psi[:,ig]
                 psi[:,ip] = psi[:,ip] / max(LA.norm(psi[:,ip]),1e-16)
                     
-        [dtemp,utemp] = LA.eigh(A)
-        psivec = psi[:,range(0,krydim)] @ utemp[:,0]
+        [dtemp,utemp] = LA.eigh(A) # Computes eigenvalues and eigenvectors 
+                                   # dtemp contains the eigenvalues in ascending order
+
+        # update the estimate of the eigenvector
+        psivec = psi[:,range(0,krydim)] @ utemp[:,0] # utemp[:,0] is eigenvector of the smallest eigenvalue
         
+    # store the updated eigenvector and eigenvalue
     psivec = psivec/LA.norm(psivec)
-    dval = dtemp[0]
+    dval = dtemp[0] # smallest eigenvalue
     
     return psivec, dval

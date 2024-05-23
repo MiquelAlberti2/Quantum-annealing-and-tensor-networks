@@ -37,9 +37,32 @@ def easy_test():
 
     return N, values, weights, W_capacity
 
+def medium_test():
+    N = 4
+    values = [[0] * (i+1) for i in range(N)]
+
+    # Assigning profit of each item
+    values[0][0] = 58 
+    values[1][0] = 62
+    values[2][0] = 11
+    values[3][0] = 88
+    values[1][1] = 44
+    values[2][1] = 11
+    values[3][1] = 49 
+    values[2][2] = 42
+    values[3][2] = 29
+    values[3][3] = 61
+
+    # Assigning weight of each item
+    weights = [29, 78, 36, 52]
+
+    W_capacity = 114
+
+    return N, values, weights, W_capacity
+
 # --------------------------------------------------------
 
-def random_test(N, mult):
+def random_test(N, mult = 3):
     values = [[0] * (i+1) for i in range(N)]
 
     # Assigning random profit for each item
