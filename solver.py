@@ -27,16 +27,30 @@ class Solver(ABC):
         # Convert to Ising model (spin variables)
         self.H_dict = self.model.to_ising()
 
+        max_coeff = float('-inf') # normalizing factor
+
         # H_dict[0] contains linear interactions
         self.h_coeffs = np.zeros((self.N))
         for site in self.H_dict[0]:
-            self.h_coeffs[site] = self.H_dict[0][site]
+            coeff = self.H_dict[0][site]
+            self.h_coeffs[site] = coeff
+
+            if abs(coeff) > max_coeff: 
+                max_coeff = coeff
         
         # H_dict[1] contains quadratic interactions
         self.J_coeffs = np.zeros((self.N,self.N))
         for term in self.H_dict[1]:
             # TODO in formulation i>j, but in MPO i<j (triangular superior, la meitat buida)
-            self.J_coeffs[min(term[0], term[1]), max(term[0], term[1])] = self.H_dict[1][term]
+            coeff = self.H_dict[1][term]
+            self.J_coeffs[min(term[0], term[1]), max(term[0], term[1])] = coeff
+
+            if abs(coeff) > max_coeff: 
+                max_coeff = coeff
+
+        # normalize the Ising Hamiltonian
+        self.h_coeffs = self.h_coeffs / max_coeff
+        self.J_coeffs = self.J_coeffs / max_coeff
 
         self.offset = self.H_dict[2]
 

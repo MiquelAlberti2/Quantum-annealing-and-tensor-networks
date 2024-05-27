@@ -53,7 +53,7 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
                 for m in range(2, k+1):
                     a_list[k-1][m-1, n-1] = s*J_coeffs[N_by_2-m,N-n+1]*i_matrix
 
-        else: # k+1 > N_by_2:
+        else: # k > N_by_2:
             for m in range(2, N-k+2):
                 a_list[k-1][0, m-1] = s*J_coeffs[k-1,N-m+1]*z_matrix
                 a_list[k-1][m-1, m-1] = i_matrix

@@ -18,8 +18,9 @@ class Exact_solver(Solver):
 		self.h0_matrix = h0.matrix
 
 		# problem hamiltonian
-		ham = sum(self.H_dict[0][term] * Z(term) for term in self.H_dict[0]) # lineal terms
-		ham += sum(self.H_dict[1][term] * Z(term[0]) * Z(term[1]) for term in self.H_dict[1]) # quadratic terms
+		ham = sum(self.h_coeffs[term] * Z(term[0]) for term in np.ndindex(self.h_coeffs.shape)) # lineal terms
+		ham += sum(self.J_coeffs[term] * Z(term[0]) * Z(term[1]) for term in np.ndindex(self.J_coeffs.shape)) # quadratic terms
+
 		h1 = hamiltonians.SymbolicHamiltonian(ham)
 		self.h1_matrix = h1.matrix
 
@@ -77,6 +78,16 @@ class Exact_solver(Solver):
 		plt.title('Exact annealing run')
 		plt.xlabel('step')
 		plt.ylabel('Energy')
+		plt.legend()
+		plt.show()
+
+		# plot gap
+		plt.figure()
+		plt.plot([E_1[i] - E_0[i] for i in range(len(E_0))], label='gap')
+
+		plt.title('Exact gap')
+		plt.xlabel('step')
+		plt.ylabel('gap')
 		plt.legend()
 		plt.show()
 

@@ -9,6 +9,7 @@ from solver import Solver
 
 class DP_solver(Solver):
 	def __init__(self, W, wt, val):
+		# assumes integer values
 		super().__init__(W, wt, val)
 
 	@override

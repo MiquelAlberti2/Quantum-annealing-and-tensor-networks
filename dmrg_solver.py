@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from ncon import ncon
 from DMRG.module import doDMRG_MPO 
+from DMRG.module_penalty import doDMRG_MPO_penalty 
 from DMRG.annealing_ham_to_MPO import from_ham_coeff
 
 from DMRG.samplingMPS import SamplingMPS
@@ -17,7 +18,7 @@ class DMRG_solver(Solver):
 
         self.chi = chi # set bond dimension
 
-        self.OPTS_dispon = 2 # level of output display
+        self.OPTS_dispon = 0 # level of output display
         self.OPTS_updateon = True # level of output display
         self.OPTS_maxit = 2 # iterations of Lanczos method
         self.OPTS_krydim = 4 # dimension of Krylov subspace
@@ -59,9 +60,9 @@ class DMRG_solver(Solver):
         '''
         #### Do DMRG sweeps (2-site approach)
         energies, left_MPS, sWeight, right_MPS = doDMRG_MPO(self.A, self.ML, self.M, self.MR, self.chi,
-                                        numsweeps = time, dispon = self.OPTS_dispon, 
-                                        updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
-                                        krydim = self.OPTS_krydim)
+                                                numsweeps = time, dispon = self.OPTS_dispon, 
+                                                updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
+                                                krydim = self.OPTS_krydim)
         
         self.solution_energy = energies[-1]
         self.solution_MPS = right_MPS
@@ -86,20 +87,39 @@ class DMRG_solver(Solver):
             if ch == '0': # dimod mapping
                 self.solution_items.append(i)
 
+    def run_penalty(self, w_penalty, MPS_penalti, time = 50):
+        '''
+        time (float): # number of DMRG sweeps
+        '''
+        #### Do DMRG sweeps (2-site approach)
+        energies, left_MPS, sWeight, right_MPS = doDMRG_MPO_penalty(self.A, self.ML, self.M, self.MR, self.chi,
+                                                w_penalty, MPS_penalti,
+                                                numsweeps = time, dispon = self.OPTS_dispon, 
+                                                updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
+                                                krydim = self.OPTS_krydim)
+        
+        return energies[-1]
+
     def annealing_run(self, step = 10):
 
         self.show_run_plots = False
 
-        energies = []
+        gs_energies = []
+        exc_energies = []
+        
 
         for s in range(step+1):
             print(' ---- s=', s, ' ----')
 
             self.build_MPO_time_s(s / step)
             self.run()
-            energies.append(self.solution_energy)
+            gs_energies.append(self.solution_energy)
 
-            print('DMRG energy: ', self.solution_energy)
+            # compute first excited state
+            e = self.run_penalty(50, self.solution_MPS)
+            exc_energies.append(e)
+
+            print(f'DMRG gap: [{gs_energies[-1]}, {exc_energies[-1]}]')
 
             # build the ham matrix to test results
             aux_M = self.M.copy()
@@ -120,13 +140,29 @@ class DMRG_solver(Solver):
 
             print('Real gap: ', gap)
 
+        plt.figure()
+        plt.plot(gs_energies, label='Ground energies', marker='o')
+        plt.plot(exc_energies, label='First excited energies', marker='x')
 
-        plt.plot(energies)
+        plt.title('DMRG annealing run')
         plt.xlabel('step')
         plt.ylabel('Energy')
+        plt.legend()
+        plt.show() 
+
+        # plot gap
+        plt.figure()
+        plt.plot([exc_energies[i] - gs_energies[i] for i in range(len(gs_energies))], label='gap')
+
+        plt.title('DMRG gap')
+        plt.xlabel('step')
+        plt.ylabel('gap')
+        plt.legend()
         plt.show()
 
         self.show_run_plots = True
+        self.w_penalty = 0
+        self.psi_penalty = None
 
     def energy_of_items(self, items):
         print(' - Evaluating candidate ', items)

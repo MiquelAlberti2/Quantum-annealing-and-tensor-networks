@@ -11,8 +11,9 @@ class Qibo_annealing_solver(Solver):
     def __init__(self, W, wt, val):
         super().__init__(W, wt, val)
 
-        ham = sum(self.H_dict[0][term] * Z(term) for term in self.H_dict[0]) # lineal terms
-        ham += sum(self.H_dict[1][term] * Z(term[0]) * Z(term[1]) for term in self.H_dict[1]) # quadratic terms
+        # problem hamiltonian
+        ham = sum(self.h_coeffs[term] * Z(term[0]) for term in np.ndindex(self.h_coeffs.shape)) # lineal terms
+        ham += sum(self.J_coeffs[term] * Z(term[0]) * Z(term[1]) for term in np.ndindex(self.J_coeffs.shape)) # quadratic terms
 
         self.h1 = hamiltonians.SymbolicHamiltonian(ham)
 
