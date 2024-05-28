@@ -144,9 +144,12 @@ def doDMRG_MPO(MPS,ML,M,MR,chi, numsweeps = 10, dispon = 2, updateon = True, max
 def doApplyMPO(psi,L,M1,M2,R):
     """ function for applying MPO to state """
     
-    return ncon([psi.reshape(L.shape[2],M1.shape[3],M2.shape[3],R.shape[2]),L,M1,M2,R],
-                       [[1,3,5,7],[2,-1,1],[2,4,-2,3],[4,6,-3,5],[6,-4,7]]).reshape( 
-                               L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2])
+    psi_reshaped = psi.reshape(L.shape[2],M1.shape[3],M2.shape[3],R.shape[2])
+    # compute H|psi>
+    result = ncon([psi_reshaped,L,M1,M2,R],
+                  [[1,3,5,7],[2,-1,1],[2,4,-2,3],[4,6,-3,5],[6,-4,7]])
+    
+    return result.reshape(L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2])
 
 #-------------------------------------------------------------------------
 def eigLanczos(psivec,linFunct,functArgs, maxit = 2, krydim = 4):

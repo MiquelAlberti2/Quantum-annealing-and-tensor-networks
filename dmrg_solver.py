@@ -106,6 +106,8 @@ class DMRG_solver(Solver):
 
         gs_energies = []
         exc_energies = []
+
+        real_gaps = []
         
 
         for s in range(step+1):
@@ -116,7 +118,7 @@ class DMRG_solver(Solver):
             gs_energies.append(self.solution_energy)
 
             # compute first excited state
-            e = self.run_penalty(50, self.solution_MPS)
+            e = self.run_penalty(20, self.solution_MPS)
             exc_energies.append(e)
 
             print(f'DMRG gap: [{gs_energies[-1]}, {exc_energies[-1]}]')
@@ -137,7 +139,7 @@ class DMRG_solver(Solver):
             # perform exact diagonalization
             eigenvalues, eigenvectors = np.linalg.eig(ham)
             gap = sorted(eigenvalues)[:2]
-
+            real_gaps.append(gap[1]-gap[0])
             print('Real gap: ', gap)
 
         plt.figure()
@@ -152,9 +154,10 @@ class DMRG_solver(Solver):
 
         # plot gap
         plt.figure()
-        plt.plot([exc_energies[i] - gs_energies[i] for i in range(len(gs_energies))], label='gap')
+        plt.plot([exc_energies[i] - gs_energies[i] for i in range(len(gs_energies))], label='DMRG gaps', marker='o')
+        plt.plot(real_gaps, label='Real gaps', marker='x')
 
-        plt.title('DMRG gap')
+        plt.title('Annealing gaps')
         plt.xlabel('step')
         plt.ylabel('gap')
         plt.legend()

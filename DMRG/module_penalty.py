@@ -159,25 +159,46 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
 #-------------------------------------------------------------------------
 def doApplyMPO(psi,L,M1,M2,R, w_penalty, MPS_penalty,L_p,R_p):
     """ function for applying MPO to state """    
+
+    print('---------------------------------------------------')
+    print(w_penalty)
+    print(L_p)
+    print(R_p)
+
+    psi_reshaped = psi.reshape(L.shape[2],M1.shape[3],M2.shape[3],R.shape[2])
+    psi_penalty_reshaped = MPS_penalty.reshape(L_p.shape[0],M1.shape[3],M2.shape[3],R_p.shape[0])
+
+    '''print(psi_reshaped)
+    print(psi_penalty_reshaped)'''
+
     # compute H|psi>
-    result = ncon([psi.reshape(L.shape[2],M1.shape[3],M2.shape[3],R.shape[2]),L,M1,M2,R],
-                       [[1,3,5,7],[2,-1,1],[2,4,-2,3],[4,6,-3,5],[6,-4,7]]).reshape( 
-                               L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2])
+    result = ncon([psi_reshaped,L,M1,M2,R],
+                  [[1,3,5,7],[2,-1,1],[2,4,-2,3],[4,6,-3,5],[6,-4,7]])
+    
+    print('psi_mpo: ', result.reshape(L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2]))
     
     # print('L: ', L.shape)
     '''print('L_p: ', L_p.shape)
     print('R_p: ', R_p.shape)
     print('psi: ', psi.shape)
     print('MPS_penalty: ', MPS_penalty.shape)'''
-
+    # print(w_penalty)
+    # print(MPS_penalty)
     
     # add penalty term w|psi_penalty><psi_penalty|psi>
-    result += w_penalty*MPS_penalty \
-              *ncon([psi.reshape(L_p.shape[1],M1.shape[3],M2.shape[3],R_p.shape[1]),L_p,
-                     np.conj(MPS_penalty.reshape(L_p.shape[0],M1.shape[3],M2.shape[3],R_p.shape[0])),R_p],
-                       [[1,3,5,7],[2,1],[2,3,5,6],[6,7]]).reshape(1)
+    ortho_term = ncon([L_p,psi_penalty_reshaped,R_p],
+                      [[2,-1],[2,-3,-5,6],[6,-7]])
     
-    return result
+    overlap = ncon([np.conj(ortho_term), psi_reshaped], [[1, 2, 3, 4], [1, 2, 3, 4]])
+
+    # print('ortho_term: ', ortho_term)
+    print('overlap: ', overlap)
+
+    result += w_penalty*overlap*ortho_term
+
+    # print(result)
+    
+    return result.reshape(L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2])
 
 #-------------------------------------------------------------------------
 def eigLanczos(psivec,linFunct,functArgs, maxit = 2, krydim = 4):
