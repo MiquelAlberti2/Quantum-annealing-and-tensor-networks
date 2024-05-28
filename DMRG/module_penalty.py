@@ -4,7 +4,7 @@ import numpy as np
 from numpy import linalg as LA
 from ncon import ncon
 
-def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, dispon = 2, updateon = True, maxit = 2, krydim = 4):
+def doDMRG_MPO_penalty(MPS_L,ML,M,MR,chi, w_penalty, MPS_penalty_L, MPS_penalty_R, numsweeps = 10, dispon = 2, updateon = True, maxit = 2, krydim = 4):
     """
     ------------------------
     by Glen Evenbly (c) for www.tensors.net, (v1.1) - last modified 19/1/2019
@@ -39,7 +39,7 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
 
     ##### left-to-right 'warmup', put MPS in right orthogonal form
     chid = M[0].shape[2] #local dimension
-    Nsites = len(MPS)
+    Nsites = len(MPS_L)
     L = [0 for x in range(Nsites)]
     L[0] = ML
     R = [0 for x in range(Nsites)]
@@ -55,22 +55,22 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
   
 
     for p in range(Nsites-1):
-        chil = MPS[p].shape[0]
-        chir = MPS[p].shape[2]
+        chil = MPS_L[p].shape[0]
+        chir = MPS_L[p].shape[2]
 
-        utemp, stemp, vhtemp = LA.svd(MPS[p].reshape(chil*chid,chir), full_matrices=False)
+        utemp, stemp, vhtemp = LA.svd(MPS_L[p].reshape(chil*chid,chir), full_matrices=False)
 
-        MPS[p] = utemp.reshape(chil,chid,chir)
-        MPS[p+1] = ncon([np.diag(stemp) @ vhtemp,MPS[p+1]], [[-1,1],[1,-2,-3]])/LA.norm(stemp)
-        L[p+1] = ncon([L[p],M[p],MPS[p],np.conj(MPS[p])],[[2,1,4],[2,-1,3,5],[4,5,-3],[1,3,-2]])
-        L_p[p+1] = ncon([L_p[p],MPS[p],np.conj(MPS_penalty[p])],[[1,4],[4,3,-3],[1,3,-2]])
+        MPS_L[p] = utemp.reshape(chil,chid,chir)
+        MPS_L[p+1] = ncon([np.diag(stemp) @ vhtemp,MPS_L[p+1]], [[-1,1],[1,-2,-3]])/LA.norm(stemp)
+        L[p+1] = ncon([L[p],M[p],MPS_L[p],np.conj(MPS_L[p])],[[2,1,4],[2,-1,3,5],[4,5,-3],[1,3,-2]])
+        L_p[p+1] = ncon([L_p[p],MPS_L[p],np.conj(MPS_penalty_L[p])],[[1,4],[4,3,-3],[1,3,-2]])
     
-    chil = MPS[Nsites-1].shape[0]
-    chir = MPS[Nsites-1].shape[2]
+    chil = MPS_L[Nsites-1].shape[0]
+    chir = MPS_L[Nsites-1].shape[2]
 
-    utemp, stemp, vhtemp = LA.svd(MPS[Nsites-1].reshape(chil*chid,chir), full_matrices=False)
+    utemp, stemp, vhtemp = LA.svd(MPS_L[Nsites-1].reshape(chil*chid,chir), full_matrices=False)
 
-    MPS[Nsites-1] = utemp.reshape(chil,chid,chir)
+    MPS_L[Nsites-1] = utemp.reshape(chil,chid,chir)
     sWeight = [0 for x in range(Nsites+1)]
     sWeight[Nsites] = (np.diag(stemp) @ vhtemp) / LA.norm(stemp)
     
@@ -88,30 +88,30 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
         for p in range(Nsites-2,-1,-1):
         
             ##### two-site update
-            chil = MPS[p].shape[0]
-            chir = MPS[p+1].shape[2]
-            psiGround = ncon([MPS[p],MPS[p+1],sWeight[p+2]],[[-1,-2,1],[1,-3,2],[2,-4]]).reshape(chil*chid*chid*chir) # vector | psi >
+            chil = MPS_L[p].shape[0]
+            chir = MPS_L[p+1].shape[2]
+            psiGround = ncon([MPS_L[p],MPS_L[p+1],sWeight[p+2]],[[-1,-2,1],[1,-3,2],[2,-4]]).reshape(chil*chid*chid*chir) # vector | psi >
             if updateon: # disables updates for the final sweep
-                MPS_penalty_p = ncon([MPS_penalty[p],MPS_penalty[p+1]],[[-1,-2,1],[1,-3,-4]]).reshape(chil*chid*chid*chir) # orthogonality constraint
-                psiGround, Entemp = eigLanczos(psiGround,doApplyMPO,(L[p],M[p],M[p+1],R[p+1],w_penalty,MPS_penalty_p,L_p[p],R_p[p+1]), maxit = maxit, krydim = krydim)
+                local_MPS_penalty = ncon([MPS_penalty_L[p],MPS_penalty_L[p+1]],[[-1,-2,1],[1,-3,-4]]).reshape(chil*chid*chid*chir) # orthogonality constraint
+                psiGround, Entemp = eigLanczos(psiGround,doApplyMPO,(L[p],M[p],M[p+1],R[p+1],w_penalty,local_MPS_penalty,L_p[p],R_p[p+1]), maxit = maxit, krydim = krydim)
                 Ekeep = np.append(Ekeep,Entemp)
             
             utemp, stemp, vhtemp = LA.svd(psiGround.reshape(chil*chid,chid*chir), full_matrices=False)
             chitemp = min(len(stemp),chi)
-            MPS[p] = utemp[:,range(chitemp)].reshape(chil,chid,chitemp)
+            MPS_L[p] = utemp[:,range(chitemp)].reshape(chil,chid,chitemp)
             sWeight[p+1] = np.diag(stemp[range(chitemp)]/LA.norm(stemp[range(chitemp)]))
             MPS_R[p+1] = vhtemp[range(chitemp),:].reshape(chitemp,chid,chir)
             
             ##### new block Hamiltonian
             R[p] = ncon([M[p+1],R[p+1],MPS_R[p+1],np.conj(MPS_R[p+1])],[[-1,2,3,5],[2,1,4],[-3,5,4],[-2,3,1]])
-            R_p[p] = ncon([R_p[p+1],MPS_R[p+1],np.conj(MPS_penalty[p+1])],[[1,4],[-3,3,4],[-2,3,1]])
+            R_p[p] = ncon([R_p[p+1],MPS_R[p+1],np.conj(MPS_penalty_R[p+1])],[[1,4],[-3,3,4],[-2,3,1]])
             
             if dispon == 2:
                 print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
         
         ###### left boundary tensor
-        chil = MPS[0].shape[0]; chir = MPS[0].shape[2]
-        Atemp = ncon([MPS[0],sWeight[1]],[[-1,-2,1],[1,-3]]).reshape(chil,chid*chir)
+        chil = MPS_L[0].shape[0]; chir = MPS_L[0].shape[2]
+        Atemp = ncon([MPS_L[0],sWeight[1]],[[-1,-2,1],[1,-3]]).reshape(chil,chid*chir)
         utemp, stemp, vhtemp = LA.svd(Atemp, full_matrices=False)
         MPS_R[0] = vhtemp.reshape(chil,chid,chir)
         sWeight[0] = utemp @ (np.diag(stemp)/LA.norm(stemp))
@@ -124,20 +124,20 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
             chir = MPS_R[p+1].shape[2]
             psiGround = ncon([sWeight[p],MPS_R[p],MPS_R[p+1]],[[-1,1],[1,-2,2],[2,-3,-4]]).reshape(chil*chid*chid*chir)
             if updateon: # disables updates for the final sweep
-                MPS_penalty_p = ncon([MPS_penalty[p],MPS_penalty[p+1]],[[-1,-2,1],[1,-3,-4]]).reshape(chil*chid*chid*chir)
-                psiGround, Entemp = eigLanczos(psiGround,doApplyMPO,(L[p],M[p],M[p+1],R[p+1],w_penalty,MPS_penalty_p,L_p[p],R_p[p+1]), maxit = maxit, krydim = krydim)
+                local_MPS_penalty = ncon([MPS_penalty_R[p],MPS_penalty_R[p+1]],[[-1,-2,2],[2,-3,-4]]).reshape(chil*chid*chid*chir)
+                psiGround, Entemp = eigLanczos(psiGround,doApplyMPO,(L[p],M[p],M[p+1],R[p+1],w_penalty,local_MPS_penalty,L_p[p],R_p[p+1]), maxit = maxit, krydim = krydim)
                 Ekeep = np.append(Ekeep,Entemp)
             
             utemp, stemp, vhtemp = LA.svd(psiGround.reshape(chil*chid,chid*chir), full_matrices=False)
             chitemp = min(len(stemp),chi)
-            MPS[p] = utemp[:,range(chitemp)].reshape(chil,chid,chitemp)
+            MPS_L[p] = utemp[:,range(chitemp)].reshape(chil,chid,chitemp)
             sWeight[p+1] = np.diag(stemp[range(chitemp)]/LA.norm(stemp[range(chitemp)]))
             MPS_R[p+1] = vhtemp[range(chitemp),:].reshape(chitemp,chid,chir)
             
             ##### new block Hamiltonian
-            L[p+1] = ncon([L[p],M[p],MPS[p],np.conj(MPS[p])],[[2,1,4],[2,-1,3,5],[4,5,-3],[1,3,-2]])
-            L_p[p+1] = ncon([L_p[p],MPS[p],np.conj(MPS[p])],[[1,4],[4,3,-3],[1,3,-2]])
-        
+            L[p+1] = ncon([L[p],M[p],MPS_L[p],np.conj(MPS_L[p])],[[2,1,4],[2,-1,3,5],[4,5,-3],[1,3,-2]])
+            L_p[p+1] = ncon([L_p[p],MPS_L[p],np.conj(MPS_penalty_L[p])],[[1,4],[4,3,-3],[1,3,-2]])
+
             ##### display energy
             if dispon == 2:
                 print('Sweep: %d of %d, Loc: %d,Energy: %f' % (k, numsweeps, p, Ekeep[-1]))
@@ -147,56 +147,37 @@ def doDMRG_MPO_penalty(MPS,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, 
         chir = MPS_R[Nsites-1].shape[2]
         Atemp = ncon([MPS_R[Nsites-1],sWeight[Nsites-1]],[[1,-2,-3],[-1,1]]).reshape(chil*chid,chir)
         utemp, stemp, vhtemp = LA.svd(Atemp, full_matrices=False)
-        MPS[Nsites-1] = utemp.reshape(chil,chid,chir)
+        MPS_L[Nsites-1] = utemp.reshape(chil,chid,chir)
         sWeight[Nsites] = (stemp/LA.norm(stemp))*vhtemp
         
         if dispon == 1:
             print('Sweep: %d of %d, Energy: %12.12d, Bond dim: %d' % (k, numsweeps, Ekeep[-1], chi))
             
-    return Ekeep, MPS, sWeight, MPS_R
+    return Ekeep, MPS_L, sWeight, MPS_R
 
 
 #-------------------------------------------------------------------------
-def doApplyMPO(psi,L,M1,M2,R, w_penalty, MPS_penalty,L_p,R_p):
+def doApplyMPO(psi,L,M1,M2,R, w_penalty, psi_penalty,L_p,R_p):
     """ function for applying MPO to state """    
 
     print('---------------------------------------------------')
-    print(w_penalty)
-    print(L_p)
-    print(R_p)
 
     psi_reshaped = psi.reshape(L.shape[2],M1.shape[3],M2.shape[3],R.shape[2])
-    psi_penalty_reshaped = MPS_penalty.reshape(L_p.shape[0],M1.shape[3],M2.shape[3],R_p.shape[0])
-
-    '''print(psi_reshaped)
-    print(psi_penalty_reshaped)'''
+    psi_penalty_reshaped = psi_penalty.reshape(L_p.shape[0],M1.shape[3],M2.shape[3],R_p.shape[0])
 
     # compute H|psi>
     result = ncon([psi_reshaped,L,M1,M2,R],
                   [[1,3,5,7],[2,-1,1],[2,4,-2,3],[4,6,-3,5],[6,-4,7]])
-    
-    print('psi_mpo: ', result.reshape(L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2]))
-    
-    # print('L: ', L.shape)
-    '''print('L_p: ', L_p.shape)
-    print('R_p: ', R_p.shape)
-    print('psi: ', psi.shape)
-    print('MPS_penalty: ', MPS_penalty.shape)'''
-    # print(w_penalty)
-    # print(MPS_penalty)
-    
+        
     # add penalty term w|psi_penalty><psi_penalty|psi>
     ortho_term = ncon([L_p,psi_penalty_reshaped,R_p],
-                      [[2,-1],[2,-3,-5,6],[6,-7]])
+                      [[-1,1],[1,-2,-3,2],[-4,2]])
     
     overlap = ncon([np.conj(ortho_term), psi_reshaped], [[1, 2, 3, 4], [1, 2, 3, 4]])
 
-    # print('ortho_term: ', ortho_term)
     print('overlap: ', overlap)
 
     result += w_penalty*overlap*ortho_term
-
-    # print(result)
     
     return result.reshape(L.shape[2]*M1.shape[3]*M2.shape[3]*R.shape[2])
 

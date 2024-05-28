@@ -87,13 +87,15 @@ class DMRG_solver(Solver):
             if ch == '0': # dimod mapping
                 self.solution_items.append(i)
 
-    def run_penalty(self, w_penalty, MPS_penalti, time = 50):
+        return left_MPS, right_MPS
+
+    def run_penalty(self, w_penalty, MPS_penalti_L, MPS_penalti_R, time = 50):
         '''
         time (float): # number of DMRG sweeps
         '''
         #### Do DMRG sweeps (2-site approach)
         energies, left_MPS, sWeight, right_MPS = doDMRG_MPO_penalty(self.A, self.ML, self.M, self.MR, self.chi,
-                                                w_penalty, MPS_penalti,
+                                                w_penalty, MPS_penalti_L, MPS_penalti_R,
                                                 numsweeps = time, dispon = self.OPTS_dispon, 
                                                 updateon = self.OPTS_updateon, maxit = self.OPTS_maxit,
                                                 krydim = self.OPTS_krydim)
@@ -114,11 +116,11 @@ class DMRG_solver(Solver):
             print(' ---- s=', s, ' ----')
 
             self.build_MPO_time_s(s / step)
-            self.run()
+            MPS_L, MPS_R = self.run()
             gs_energies.append(self.solution_energy)
 
             # compute first excited state
-            e = self.run_penalty(20, self.solution_MPS)
+            e = self.run_penalty(150, MPS_L, MPS_R)
             exc_energies.append(e)
 
             print(f'DMRG gap: [{gs_energies[-1]}, {exc_energies[-1]}]')
