@@ -2,7 +2,7 @@ import numpy as np
 
 def from_ham_coeff(N, J_coeffs, h_coeffs, s):
     """
-    Construct an MPO from a annealing Hamiltonian for QUBO problems
+    Construct an MPO for an annealing Hamiltonian for QUBO problems
 
     Args:
         N: number of qubits
@@ -10,12 +10,8 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
         h_coeffs: coefficients of the short range interactions
         s: transverse field strength
 
-    Raises:
-        NotImplementedError: Type of Hamiltonian not supported.
-
     Returns:
         MPO (List[array]): List of tensors representing the MPO (1 tensor for each qubit)
-        offset (float): Offset for the energy of the Hamiltonian
     """
     # TODO Simplify MPOs if certain given coefficients are 0
 
@@ -37,7 +33,7 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
         a_list[k-1][0,0] = i_matrix
         a_list[k-1][-1,-1] = i_matrix
         a_list[k-1][-2,-1] = z_matrix
-        a_list[k-1][0,-1] = (-1)*(1-s)*x_matrix + s*h_coeffs[k-1]*z_matrix
+        a_list[k-1][0,-1] = (-1/N)*(1-s)*x_matrix + s*h_coeffs[k-1]*z_matrix
         
         if k < N_by_2:
             a_list[k-1][0,1] = z_matrix 
@@ -62,6 +58,6 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
     a_list[0] = a_list[0][0, :] # other rows are used to propagate information of previous tensors, does not make sense to keep them
     a_list[-1] = a_list[-1][:, -1] # other columns are used to propagate information to the next tensors, does not make sense to keep them
 
-    We don't need this bc the implementation uses dummy boundary matrices
+    We don't need this bc the DMRG implementation uses dummy boundary matrices
     '''
     return a_list

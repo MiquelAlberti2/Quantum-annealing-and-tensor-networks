@@ -13,7 +13,7 @@ class Exact_solver(Solver):
 		super().__init__(W, wt, val)
 
 		# initial hamiltonian
-		ham = (-1)*sum(X(i) for i in range(self.N))
+		ham = (-1/self.N)*sum(X(i) for i in range(self.N))
 		h0 = hamiltonians.SymbolicHamiltonian(ham)
 		self.h0_matrix = h0.matrix
 

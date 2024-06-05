@@ -17,6 +17,9 @@ class Qibo_annealing_solver(Solver):
 
         self.h1 = hamiltonians.SymbolicHamiltonian(ham)
 
+        self.annealing_schedule = lambda t: t
+        self.custom_time = False
+
     def get_ham(self):
         return self.h1
 
@@ -31,6 +34,10 @@ class Qibo_annealing_solver(Solver):
     
     def ham_matrix(self):
         return self.h1.matrix
+    
+    def set_annealing_schedule(self, s):
+        self.annealing_schedule = s
+        self.custom_time = True
 
     @override
     def run(self, time = 50):
@@ -38,7 +45,7 @@ class Qibo_annealing_solver(Solver):
         time (float): Total time of the adiabatic evolution.
         '''
         
-        ham = (-1)*sum(X(i) for i in range(self.N))
+        ham = (-1/self.N)*sum(X(i) for i in range(self.N))
         h0 = hamiltonians.SymbolicHamiltonian(ham)
 
         bac = self.h1.backend
@@ -63,7 +70,7 @@ class Qibo_annealing_solver(Solver):
         energy = callbacks.Energy(self.h1)
         overlap = callbacks.Overlap(target_state)
         evolution = models.AdiabaticEvolution(
-            h0, self.h1, lambda t: t, dt=dt, solver=solver, callbacks=[energy, overlap]
+            h0, self.h1, self.annealing_schedule, dt=dt, solver=solver, callbacks=[energy, overlap]
         )
         self.final_psi = evolution(final_time=time)
         self.solution_items = self.convert_state_to_items(self.final_psi)
@@ -73,6 +80,10 @@ class Qibo_annealing_solver(Solver):
         # Plots
         tt = np.linspace(0, time, int(time / dt) + 1)
         plt.figure(figsize=(12, 4))
+        if self.custom_time:
+            plt.title('Custom time schedule')
+        else:
+            plt.title('Ordinary time schedule')
         plt.subplot(121)
         plt.plot(tt, energy[:], linewidth=2.0, label="Evolved state")
         plt.axhline(y=target_energy, color="red", linewidth=2.0, label="Ground state")
