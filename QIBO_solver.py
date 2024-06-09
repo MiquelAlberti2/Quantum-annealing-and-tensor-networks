@@ -18,7 +18,6 @@ class Qibo_annealing_solver(Solver):
         self.h1 = hamiltonians.SymbolicHamiltonian(ham)
 
         self.annealing_schedule = lambda t: t
-        self.custom_time = False
 
     def get_ham(self):
         return self.h1
@@ -37,14 +36,15 @@ class Qibo_annealing_solver(Solver):
     
     def set_annealing_schedule(self, s):
         self.annealing_schedule = s
-        self.custom_time = True
 
     @override
     def run(self, time = 50):
         '''
-        time (float): Total time of the adiabatic evolution.
-        '''
+        Runs simulated annealing using the Qibo library
         
+        time: Total time of the adiabatic evolution.
+        '''
+        # Initial Hamiltonian
         ham = (-1/self.N)*sum(X(i) for i in range(self.N))
         h0 = hamiltonians.SymbolicHamiltonian(ham)
 
@@ -79,24 +79,34 @@ class Qibo_annealing_solver(Solver):
 
         # Plots
         tt = np.linspace(0, time, int(time / dt) + 1)
-        plt.figure(figsize=(12, 4))
-        if self.custom_time:
-            plt.title('Custom time schedule')
-        else:
-            plt.title('Ordinary time schedule')
+        plt.figure(figsize=(13, 5))
         plt.subplot(121)
         plt.plot(tt, energy[:], linewidth=2.0, label="Evolved state")
         plt.axhline(y=target_energy, color="red", linewidth=2.0, label="Ground state")
-        plt.xlabel("$t$")
-        plt.ylabel("$H_1$")
-        plt.legend()
+        plt.xlabel("$t$", fontsize=16)
+        plt.ylabel("$H_1$", fontsize=16)
+        plt.legend(fontsize=15)
+        x_ticks = np.linspace(min(tt), max(tt), num=4) 
+        y_ticks = np.linspace(min(energy[:]), max(energy[:]), num=4) 
+        plt.xticks(x_ticks, fontsize=13) 
+        plt.yticks(y_ticks, fontsize=13)
 
         plt.subplot(122)
         plt.plot(tt, overlap[:], linewidth=2.0)
-        plt.xlabel("$t$")
-        plt.ylabel("Overlap")
+        plt.xlabel("$t$", fontsize=16)
+        plt.ylabel("Overlap", fontsize=16)
+        y_ticks = np.linspace(min(overlap[:]), max(overlap[:]), num=4)
+        plt.xticks(x_ticks, fontsize=13) 
+        plt.yticks(y_ticks, fontsize=13)
 
     def convert_state_to_items(self, state):
+        '''
+        Auxiliary method for converting the ground state found during the annealing run
+        to the list of items that form the solution.
+
+        Warning: it is not an efficient implementation, as it looks for the state of the basis
+        with the biggest amplitud, which has a cost O(2^N)
+        '''
         max_i = -1
         max_amplitud = 0
         for i, amplitud in enumerate(state):

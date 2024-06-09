@@ -13,7 +13,7 @@ def from_ham_coeff(N, J_coeffs, h_coeffs, s):
     Returns:
         MPO (List[array]): List of tensors representing the MPO (1 tensor for each qubit)
     """
-    # TODO Simplify MPOs if certain given coefficients are 0
+    # Future work: simplify MPOs if certain given coefficients are 0
 
     # Start building the Tensor Network
     i_matrix = np.array([[1, 0], [0, 1]])

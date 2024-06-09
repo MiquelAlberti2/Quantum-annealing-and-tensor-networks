@@ -15,6 +15,8 @@ class DP_solver(Solver):
 	@override
 	def run(self, time = 0): 
 		'''
+		Solves the QKP using dynammic programming. The optimal solution is not guaranteed.
+
         This Solver does not use time
         '''
 

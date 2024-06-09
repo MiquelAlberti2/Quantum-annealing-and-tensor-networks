@@ -9,24 +9,30 @@ import matplotlib.pyplot as plt
 import itertools
 
 class Exact_solver(Solver):
-	def __init__(self, W, wt, val):
+	def __init__(self, W, wt, val, test_annealing = True):
 		super().__init__(W, wt, val)
 
-		# initial hamiltonian
-		ham = (-1/self.N)*sum(X(i) for i in range(self.N))
-		h0 = hamiltonians.SymbolicHamiltonian(ham)
-		self.h0_matrix = h0.matrix
+		# If the computation of the minimum gap is not required,
+		# test_annealing can be set to False for efficiency
+		if test_annealing:
+			# initial hamiltonian
+			ham = (-1/self.N)*sum(X(i) for i in range(self.N))
+			h0 = hamiltonians.SymbolicHamiltonian(ham)
+			self.h0_matrix = h0.matrix
 
-		# problem hamiltonian
-		ham = sum(self.h_coeffs[term] * Z(term[0]) for term in np.ndindex(self.h_coeffs.shape)) # lineal terms
-		ham += sum(self.J_coeffs[term] * Z(term[0]) * Z(term[1]) for term in np.ndindex(self.J_coeffs.shape)) # quadratic terms
+			# problem hamiltonian
+			ham = sum(self.h_coeffs[term] * Z(term[0]) for term in np.ndindex(self.h_coeffs.shape)) # lineal terms
+			ham += sum(self.J_coeffs[term] * Z(term[0]) * Z(term[1]) for term in np.ndindex(self.J_coeffs.shape)) # quadratic terms
 
-		h1 = hamiltonians.SymbolicHamiltonian(ham)
-		self.h1_matrix = h1.matrix
+			h1 = hamiltonians.SymbolicHamiltonian(ham)
+			self.h1_matrix = h1.matrix
 
-		self.target_ham = self.h1_matrix
+			self.target_ham = self.h1_matrix
 
 	def evaluate_combination(self, combination):
+		'''
+		Auxiliar method that evaluates a candidate of the QKP
+		'''
 		items = []
 
 		for i, decision in enumerate(combination):
@@ -37,6 +43,12 @@ class Exact_solver(Solver):
 
 	@override
 	def run(self, time = 0):
+		'''
+		Solves the QKP using brute force.
+
+        This Solver does not use time
+        '''
+
 		best_feasible_profit = float('-inf')
 		minimum_energy = float('inf')
 
@@ -53,6 +65,9 @@ class Exact_solver(Solver):
 
 
 	def compute_target_gap(self):
+		'''
+		Computes the real gap of self.target_ham using exact diagonalization
+		'''
 		eigenvalues, eigenvectors = np.linalg.eig(self.target_ham)
 		gap = sorted(eigenvalues)[:2]
 		return gap
@@ -61,6 +76,10 @@ class Exact_solver(Solver):
 		self.target_ham = (1-s)*self.h0_matrix + s*self.h1_matrix
 	
 	def annealing_run(self, step = 10):
+		'''
+        Runs the exact annealing evolution of the Hamiltonian representing the instance of the QKP given for
+		a discrete set of steps using exact diagonalization.
+        '''
 		E_0 = []
 		E_1 = []
 

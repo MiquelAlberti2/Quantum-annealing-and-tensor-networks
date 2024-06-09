@@ -1,0 +1,15 @@
+{"N": 1000, "W": 1000, "profit": 471831, "weight": 1000, "energy": -471831.0, "solver": "DP"}
+{"N": 1000, "W": 1000, "profit": 471444, "weight": 1000, "energy": -471444.0, "solver": "Neal"}
+-
+{"N": 1000, "W": 1000, "profit": 501420, "weight": 1000, "energy": -501420.0, "solver": "DP"}
+{"N": 1000, "W": 1000, "profit": 501537, "weight": 998, "energy": -502314.09996800823, "solver": "Neal"}
+-
+{"N": 1000, "W": 1000, "profit": 398513, "weight": 1000, "energy": -398513.0, "solver": "DP"}
+{"N": 1000, "W": 1000, "profit": 394362, "weight": 998, "energy": -395174.4226938268, "solver": "Neal"}
+-
+{"N": 1000, "W": 1000, "profit": 500849, "weight": 1000, "energy": -500849.0, "solver": "DP"}
+{"N": 1000, "W": 1000, "profit": 500291, "weight": 997, "energy": -501458.6112183596, "solver": "Neal"}
+-
+{"N": 1000, "W": 1000, "profit": 505947, "weight": 1000, "energy": -505947.0, "solver": "DP"}
+{"N": 1000, "W": 1000, "profit": 505393, "weight": 1000, "energy": -505393.0, "solver": "Neal"}
+-

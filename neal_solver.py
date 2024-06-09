@@ -10,6 +10,8 @@ class Neal_annealing_solver(Solver):
     @override
     def run(self, time = 1000):
         '''
+        Runs simulated annealing using D-Wave's Neal library
+
         time: number of reads
         '''
         sampleset = SimulatedAnnealingSampler().sample(self.model, num_reads = time)

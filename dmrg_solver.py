@@ -16,7 +16,7 @@ class DMRG_solver(Solver):
     def __init__(self, W, wt, val, chi, opts_maxit = 2, opts_krydim = 4):
         super().__init__(W, wt, val)
 
-        self.chi = chi # set bond dimension
+        self.chi = chi # bond dimension
 
         self.OPTS_dispon = 0 # level of output display
         self.OPTS_updateon = True # level of output display
@@ -36,10 +36,12 @@ class DMRG_solver(Solver):
 
         self.solution_energy = None
         self.solution_MPS = None
-
         self.show_run_plots = True
 
     def build_MPO_time_s(self, s):
+        '''
+        Builds the MPO for the instance of the QKP given at the annealing time s \in [0,1]
+        '''
         self.M = from_ham_coeff(self.N, self.J_coeffs, self.h_coeffs, s)
 
         # Dummy MPO boundary matrices
@@ -56,8 +58,13 @@ class DMRG_solver(Solver):
     @override
     def run(self, time = 50):
         '''
-        time (float): # number of DMRG sweeps
+        Runs DMRG for the MPO built in the last execution of the method self.build_MPO_time_s()
+
+        time: number of DMRG sweeps
         '''
+        if self.M is None:
+            raise Exception('Call build_MPO_time_s method first')
+        
         #### Do DMRG sweeps (2-site approach)
         energies, left_MPS, sWeight, right_MPS = doDMRG_MPO(self.A, self.ML, self.M, self.MR, self.chi,
                                                 numsweeps = time, dispon = self.OPTS_dispon, 
@@ -75,6 +82,7 @@ class DMRG_solver(Solver):
             plt.show()
             print(f'Solution energy = {self.solution_energy} + {self.offset} (offset) = {self.solution_energy + self.offset}')
 
+        # Obtain items in the result
         samplingMPS = SamplingMPS()
         result_dict = samplingMPS.sampling(right_MPS, 1000)
 
@@ -90,24 +98,20 @@ class DMRG_solver(Solver):
         return left_MPS
 
     def run_penalty(self, w_penalty, MPS_penalti_L, numsweeps = 50, normalization = False):
-        # start with an initial guess orthogonal to the previous solution
+        '''
+        Runs DMRG for the MPO built in the last execution of the method self.build_MPO_time_s(),
+        but adding a penalty to the MPS_penalti_L given.
 
-        samplingMPS = SamplingMPS()
-        result_dict = samplingMPS.sampling(MPS_penalti_L, 1000)
-
-        # get the state that appeared the most in the sampling
-        max_state = max(result_dict, key=lambda k: result_dict[k])
-
-        self.solution_items = []
-
-        # Create the MPS corresponding to the state that represents the items given
+        If MPS_penalty_L encodes the ground state, the method will return the first excited state
+        (if the penalty w_penalty is appropiate).
+        '''
+        if self.M is None:
+            raise Exception('Call build_MPO_time_s method first')
+        
+        # Custom initialitzation of the MPS for the DMRG
         init_MPS = [0 for x in range(self.N)]
 
         matrix_0 = np.array([[0, 1]])  # dimod mapping
-        reshaped_matrix_0 = matrix_0.reshape(1,2,1)
-
-        matrix_1 = np.array([[1, 0]])
-        reshaped_matrix_1 = matrix_1.reshape(1,2,1)
 
         for k in range(self.N):
             init_MPS[k] = np.zeros((MPS_penalti_L[k].shape[0],2,MPS_penalti_L[k].shape[2]))
@@ -115,81 +119,9 @@ class DMRG_solver(Solver):
             for i in range(init_MPS[k].shape[0]):
                 for j in range(init_MPS[k].shape[2]):  
                     init_MPS[k][i,:,j] = matrix_0
-
-        '''
-        if max_state[0] == '0':
-            # 1st ensor initialized with 1
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = matrix_1
-
-            # 2nd tensor initialized with 0
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = matrix_0
-
-        elif max_state[1] == '0':
-            # 1st ensor initialized with 0
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = matrix_0
-
-            # 2nd tensor initialized with 1
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = matrix_1
-        else:
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = np.array([[aux[1], 0]])
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = np.array([[-aux[0], 0]])
-
         
-        aux = MPS_penalti_L[0]
-        
-        for i in range(1,self.N):
-            aux = ncon([aux, MPS_penalti_L[i]],[[-1,-2,1],[1,-3,-4]])
-            aux = aux.reshape(1,2**(i+1),MPS_penalti_L[i].shape[2])
-
-        aux = aux.reshape(2**self.N)
-        print(aux)
-        
-        init_MPS = [0 for x in range(self.N)]
-
-        for k in range(self.N):
-            init_MPS[k] = np.zeros((MPS_penalti_L[k].shape[0],2,MPS_penalti_L[k].shape[2]))
-            if k>1:
-                for i in range(init_MPS[k].shape[0]):
-                    for j in range(init_MPS[k].shape[2]):
-                        init_MPS[k][i,:,j] = np.array([[0, 1]])
-
-        if aux[0]==0:
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = np.array([[1, 0]]) # 1 in dimod mapping
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = np.array([[0, 1]])
-  
-        elif aux[1]==0:
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = np.array([[0, 1]])
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = np.array([[1, 0]])
-        else:
-            for i in range(init_MPS[0].shape[0]):
-                for j in range(init_MPS[0].shape[2]):
-                    init_MPS[0][i,:,j] = np.array([[aux[1], 0]])
-            for i in range(init_MPS[1].shape[0]):
-                for j in range(init_MPS[1].shape[2]):
-                    init_MPS[1][i,:,j] = np.array([[-aux[0], 0]])'''
-        
-        # check if overlap is 0
-        overlap = ncon(
+        # Uncomment to check the overlap
+        '''overlap = ncon(
             [np.conj(MPS_penalti_L[0]), init_MPS[0]], [[1, 2, -1], [1, 2, -2]]
         )
         for i in range(1, self.N - 1):
@@ -197,7 +129,7 @@ class DMRG_solver(Solver):
 
         overlap = ncon([overlap, np.conj(MPS_penalti_L[self.N-1]), init_MPS[self.N-1]], [[1, 2], [1, 3, 4], [2, 3, 4]])
 
-        print('EEEEEEEEY', overlap)
+        print(overlap)'''
 
         #### Do DMRG sweeps (2-site approach)
         energies, left_MPS, sWeight, right_MPS = doDMRG_MPO_penalty(init_MPS, self.ML, self.M, self.MR, self.chi,
@@ -215,16 +147,22 @@ class DMRG_solver(Solver):
         
         return energies[-1]
 
-    def annealing_run(self, penalty, step = 10, numsweeps = 50, normalization = False):
+    def annealing_run(self, penalty = 100, step = 10, numsweeps = 50, normalization = False):
+        '''
+        Simulates the annealing evolution of the Hamiltonian representing the instance of the QKP given for
+		a discrete set of steps. For each time step of the evolution, it computes the gap with DMRG and
+        compares it with the real gap obtained with exact diagonalization, to check the accuracy of the results.
+        '''
 
         gs_energies = []
         exc_energies = []
 
         real_gaps = []
 
+        self.show_run_plots = False
+
         for s in range(step+1):
-            if self.show_run_plots:
-                print(' ---- s=', s, ' ----')
+            print(' ---- s=', s / step, ' ----')
 
             self.build_MPO_time_s(s / step)
             MPS_L = self.run()
@@ -250,45 +188,57 @@ class DMRG_solver(Solver):
             ham = ncon([ham, aux_M[-1]], [[1, -1, -3], [1, -2, -4]])
             ham = ham.reshape(2**self.N, 2**self.N)
 
-            # perform exact diagonalization
+            # perform exact diagonalization to test results
             eigenvalues, eigenvectors = np.linalg.eig(ham)
             gap = sorted(eigenvalues)[:2]
             real_gaps.append(gap[1]-gap[0])
             if self.show_run_plots:
                 print('Real gap: ', gap)
 
-        if self.show_run_plots:
-            plt.figure()
-            plt.plot(gs_energies, label='Ground energies', marker='o')
-            plt.plot(exc_energies, label='First excited energies', marker='x')
+        self.show_run_plots = True
 
-            plt.title('DMRG annealing run')
-            plt.xlabel('step')
-            plt.ylabel('Energy')
-            plt.legend()
-            plt.show() 
-
-        # plot gap
         self.dmrg_gaps = [exc_energies[i] - gs_energies[i] for i in range(len(gs_energies))]
-
-        if self.show_run_plots:
-            plt.figure()
-            plt.plot(self.dmrg_gaps, label='DMRG gaps', marker='o')
-            plt.plot(real_gaps, label='Real gaps', marker='x')
-
-            plt.title('Annealing gaps')
-            plt.xlabel('step')
-            plt.ylabel('gap')
-            plt.legend()
-            plt.show()
 
         error = 0
         for i in range(len(self.dmrg_gaps)):
             error += (self.dmrg_gaps[i] - real_gaps[i])**2
+        
+        if self.show_run_plots:
+            x_values = [s/step for s in range(step+1)]
+
+            plt.figure()
+            plt.plot(x_values, gs_energies, label='Ground energies', marker='o')
+            plt.plot(x_values, exc_energies, label='First excited energies', marker='x')
+
+            y_ticks = np.linspace(min(gs_energies), max(exc_energies), num=5) # create evenly spaced ticks
+            plt.xticks(fontsize=14) 
+            plt.yticks(y_ticks, fontsize=14)
+            plt.title('DMRG annealing run')
+            plt.xlabel('Time (s)', fontsize=16)
+            plt.ylabel('Energy', fontsize=16)
+            plt.legend(fontsize=15)
+            plt.show() 
+
+            plt.figure()
+            plt.plot(x_values, self.dmrg_gaps, label='DMRG gaps', marker='o')
+            plt.plot(x_values, real_gaps, label='Real gaps', marker='x')
+            
+            y_ticks = np.linspace(min(real_gaps), max(real_gaps), num=5) # create evenly spaced ticks
+            plt.xticks(fontsize=14) 
+            plt.yticks(y_ticks, fontsize=14)
+            plt.title('Annealing gaps')
+            plt.xlabel('Time (s)', fontsize=16)
+            plt.ylabel('Gap', fontsize=16)
+            plt.legend(fontsize=15)
+            plt.show()
 
         return error
     
     def annealing_time_estimation(self):
+        '''
+        Computes a custom annealing schedule time based on the gap
+        approximation computed with DMRG.
+        '''
         if self.dmrg_gaps is None:
             raise Exception('Call annealing_run method first')
         
@@ -299,26 +249,53 @@ class DMRG_solver(Solver):
             g_min = min(self.dmrg_gaps)
             g_max = max(self.dmrg_gaps)
 
-            return (self.dmrg_gaps[t] - g_min)/(g_max - g_min)
+            return (self.dmrg_gaps[t] - g_min + 0.05)/(g_max - g_min)
         y = np.array([velocity(s) for s in range(step)])
 
-        # Fit a polynomial of degree 5
-        p = np.polynomial.polynomial.Polynomial.fit(x, y, 5)
+        # Fit a polynomial of degree 3
+        p = np.polynomial.polynomial.Polynomial.fit(x, y, 3)
 
         # Integrate the polynomial
         p_integ = p.integ()
 
-        # Shifted and scaled function so that s(0) = 0 and s(1)
+        # Shifted and scaled function so that s(0) = 0 and s(1) = 1
         s_0 = p_integ(0)
         s_1 = p_integ(1)
 
         def scaled_polynomial(t):
             return (p_integ(t) - s_0) / (s_1 - s_0)
         
+        schedule_points = scaled_polynomial(x)
+        # Plot the data points, fitted polynomial, and its integral
+        fig, ax1 = plt.subplots()
+
+        ax1.set_xlabel('Time (t)', fontsize=16)
+        ax1.tick_params(axis='x', labelsize=14)
+        ax1.set_ylabel('Scheduled time s(t)', color='tab:red', fontsize=16)
+        ax1.plot(x, schedule_points, color='tab:red')
+        ax1.plot(x, x, color='tab:green', label=r'$s(t)=t$', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red', labelsize=14)
+        ax1.legend(fontsize=15)
+
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('DMRG gap', color='tab:blue', fontsize=16)  # we already handled the x-label with ax1
+        ax2.plot(x, self.dmrg_gaps, label='DMRG gaps', color='tab:blue', marker='o')
+        ax2.tick_params(axis='y', labelcolor='tab:blue', labelsize=14) 
+        
+        ax1.locator_params(nbins=5)
+        ax2.locator_params(nbins=6)
+        
+        plt.title('Polynomial Fit and Its Integral')
+        plt.show()
+        
         return scaled_polynomial
 
 
     def energy_of_items(self, items):
+        '''
+        Method with testing purposes. Given a selection of items of the QKP,
+        it computes the energy of their corresponding state.
+        '''
         print(' - Evaluating candidate ', items)
 
         aux_M = self.M.copy() 
@@ -354,43 +331,3 @@ class DMRG_solver(Solver):
 
         print(f'Energy: {S_left}')
         print(f'+ offset ({self.offset}) = {S_left+self.offset}')
-
-    def show_results(self):
-        print('Energy: ', self.solution_energy)
-        
-        # TODO this method is hardcoded for N=3
-        # contract the MPS to get the state
-        E = ncon(self.solution_MPS, [[-1,-2,1],[1,-3,2],[2,-4,-5]])
-        bulk_E = E.reshape(2,2,2)
-
-        max_item = '-1-1-1'
-        max_amplitud = 0
-
-        for i in range(2):
-            for j in range(2):
-                for k in range(2):
-                    print(f'state {i}{j}{k}: {bulk_E[i,j,k]}')
-
-                    if abs(bulk_E[i,j,k]) > max_amplitud:
-                        max_item = f'{i}{j}{k}'
-                        max_amplitud = abs(bulk_E[i,j,k])
-
-        print('Solution: ', max_item)
-
-
-
-'''#### Compare with exact results (computed from free fermions)
-H = np.diag(np.ones(Nsites-1),k=1) + np.diag(np.ones(Nsites-1),k=-1)
-D = LA.eigvalsh(H)
-EnExact = 2*sum(D[D < 0])
-
-##### Plot results
-plt.figure(1)
-plt.yscale('log')
-plt.plot(range(len(En1)), En1 - EnExact, 'b', label="chi = 16")
-plt.plot(range(len(En2)), En2 - EnExact, 'r', label="chi = 32")
-plt.legend()
-plt.title('DMRG for XX model')
-plt.xlabel('Update Step')
-plt.ylabel('Ground Energy Error')
-plt.show()'''

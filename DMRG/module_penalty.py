@@ -7,7 +7,10 @@ from ncon import ncon
 def doDMRG_MPO_penalty(MPS_L,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10, dispon = 2, updateon = True, maxit = 2, krydim = 4, normalization = False):
     """
     ------------------------
-    by Glen Evenbly (c) for www.tensors.net, (v1.1) - last modified 19/1/2019
+    by Glen Evenbly (c) for www.tensors.net, (v1.1)
+    Modifications I made:
+     - Make M be a list, to represent MPOs formed by different bulk matrices
+     - Add penalty to find first excited state
     ------------------------
     Implementation of DMRG for a 1D chain with open boundaries, using the two-site update strategy.
     Each update is accomplished using a custom implementation of the Lanczos iteration to find (an approximation to) the
@@ -30,11 +33,6 @@ def doDMRG_MPO_penalty(MPS_L,ML,M,MR,chi, w_penalty, MPS_penalty, numsweeps = 10
     `updateon::Bool=true`: enable or disable tensor updates
     `maxit::Integer=2`: number of iterations of Lanczos method for each diagonalization
     `krydim::Integer=4`: maximum dimension of Krylov space in superblock diagonalization
-    """
-    """
-    MODIFICATION:
-     - Make M be a list, to represent MPOs with a list of bulk M
-     - Add penalty to find first excited state
     """
 
     ##### left-to-right 'warmup', put MPS in right orthogonal form

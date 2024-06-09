@@ -1,0 +1,40 @@
+{"N": 20, "W": 100, "profit": 1595, "energy": -1714.4241506346707, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 1595, "weight": 98, "energy": -1653.3006887278345, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 1510, "weight": 87, "energy": -1714.4241506346707, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 1232, "energy": -1436.4241506346707, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 1232, "weight": 87, "energy": -1436.4241506346707, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 1232, "weight": 87, "energy": -1436.4241506346707, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 974, "energy": -1177.0622002265156, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 919, "weight": 100, "energy": -919.0, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 974, "weight": 86, "energy": -1177.0622002265156, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 929, "energy": -1074.6102632023142, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 929, "weight": 94, "energy": -1074.6102632023142, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 929, "weight": 94, "energy": -1074.6102632023142, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 1713, "energy": -1906.864100368541, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 1713, "weight": 90, "energy": -1906.864100368541, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 1713, "weight": 90, "energy": -1906.864100368541, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 1338, "energy": -1378.34511746106, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 1338, "weight": 99, "energy": -1368.3708361548, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 1175, "weight": 88, "energy": -1378.34511746106, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 1046, "energy": -1205.637694459254, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 1012, "weight": 98, "energy": -1070.3006887278345, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 1046, "weight": 81, "energy": -1205.637694459254, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 815, "energy": -959.8251007056833, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 815, "weight": 98, "energy": -873.3006887278344, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 760, "weight": 89, "energy": -959.8251007056833, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 625, "energy": -811.864100368541, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 588, "weight": 98, "energy": -646.3006887278344, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 618, "weight": 90, "energy": -811.864100368541, "solver": "Neal"}
+-
+{"N": 20, "W": 100, "profit": 816, "energy": -961.6102632023141, "solver": "Exact"}
+{"N": 20, "W": 100, "profit": 816, "weight": 94, "energy": -961.6102632023141, "solver": "DP"}
+{"N": 20, "W": 100, "profit": 816, "weight": 94, "energy": -961.6102632023141, "solver": "Neal"}
+-

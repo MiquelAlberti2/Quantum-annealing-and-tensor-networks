@@ -3,6 +3,11 @@ import numpy as np
 from ncon import ncon
 from collections import defaultdict
 
+'''
+Perfect Sampling with Unitary Tensor Networks (Andrew J. Ferris, Guifre Vidal)
+https://arxiv.org/abs/1201.3974
+'''
+
 class SamplingMPS:
 
     def _density_matrix(self,mps: np.array, r_site: int) -> np.array:

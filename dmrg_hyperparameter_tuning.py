@@ -1,8 +1,12 @@
 from dmrg_solver import DMRG_solver
 from itertools import product
+import Tests.custom_tests as tests
 
 
 def optimize(W_capacity, weights, values, chi_list, opts_maxit_list, opts_krydim_list, numsweeps_list, penalties_list, normalization_list):
+	'''
+	Find the hyperparameters that yield the lowest error for a given instance of the QKP
+	'''
 	lowest_error = float('inf')
 	best_combo = None
 
@@ -47,9 +51,17 @@ def optimize(W_capacity, weights, values, chi_list, opts_maxit_list, opts_krydim
 	print('Final error: ', error)
 
 	
+N, values, weights, W_capacity = tests.easy_test()
 
+chi = [32]
+opts_maxit = [2,3,4]
+opts_krydim = [2,4,6,8]
+numsweeps = [10,50,100]
+penalties = [0.3,0.6,1,5,10,50,100,500]
+normalization = [False, True]
 
-		
+best_combo = optimize(W_capacity, weights, values, chi, opts_maxit, opts_krydim, numsweeps, penalties, normalization)
+print(best_combo)
 	
   
 

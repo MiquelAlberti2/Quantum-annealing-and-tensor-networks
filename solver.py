@@ -10,10 +10,12 @@ class Solver(ABC):
         self.val = val # array containing the profit of each pair of items
         self.N = len(wt) # total number of items
 
-        self.mult = 5 # the bigger this factor, the greater the penalization for overweight candidates,
-                 # but also the bigger the penalization for light weight candidates
-                 # and the bigger the bonus for valid candidates close to the limit
+        a = 3 # parameter to play with if solutions are not satisfying the contraint
 
+        self.mult = a*np.log2(self.N*self.W) # the bigger this factor, the greater the penalization for overweight candidates,
+                                            # but also the bigger the penalization for light weight candidates
+                                            # and the bigger the bonus for valid candidates close to the limit
+                 
         # Define cost function with binary variables
         x = [dimod.Binary(i) for i in range(self.N)]
 
@@ -41,7 +43,8 @@ class Solver(ABC):
         # H_dict[1] contains quadratic interactions
         self.J_coeffs = np.zeros((self.N,self.N))
         for term in self.H_dict[1]:
-            # TODO in formulation i>j, but in MPO i<j (triangular superior, la meitat buida)
+            # In formulation i>j, but in MPO i<j
+            # Future work: use the same convention
             coeff = self.H_dict[1][term]
             self.J_coeffs[min(term[0], term[1]), max(term[0], term[1])] = coeff
 
@@ -58,6 +61,10 @@ class Solver(ABC):
 
     @abstractmethod
     def run(self, time):
+        '''
+        Method to be implemented by the childs of this class
+        It should compute the solution of the given QKP 
+        '''
         pass
 
     def show_solution(self):
@@ -65,8 +72,10 @@ class Solver(ABC):
             raise Exception('Call run method first')
 
         print('-------- Solution has items: ', self.solution_items, '--------')
-        self.stats_of_items(self.solution_items)
+        solution_dict = self.stats_of_items(self.solution_items)
         print('-------------------------------------------------')
+
+        return solution_dict
 
 
     def stats_of_items(self, items):
@@ -80,7 +89,19 @@ class Solver(ABC):
             print(f'Weight: {weight} (does NOT satisfy constraint W={self.W})')
         print(f'Energy: {energy}')
 
+        solution_dict = {'N': self.N,
+                         'W': self.W,
+                         'profit': value,
+                         'weight': weight,
+                         'energy': energy}
+
+        return solution_dict
+
     def evaluate_items(self, items):
+        '''
+        Given a set of items of the QKP,
+        returns its profit, weight and energy of the QUBO formulation
+        '''
         value = 0
         weight = 0
 
