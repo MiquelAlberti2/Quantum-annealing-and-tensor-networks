@@ -1,9 +1,3 @@
-
-# This code is contributed by Suyash Saxena
-# https://www.geeksforgeeks.org/python-program-for-dynamic-programming-set-10-0-1-knapsack-problem/
-
-# Modificiation 1: keep track of the items in the final solution
-# Modification 2: adapt dp to QKP, with "val" being a triangular matrix
 from overrides import override
 from solver import Solver
 
