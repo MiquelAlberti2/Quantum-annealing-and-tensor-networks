@@ -1,6 +1,6 @@
 ## Quantum Annealing and Tensor Networks: a Powerful Combination to Solve Optimization Problems
 
-![Overview](https://github.com/MiquelAlberti2/Quantum-annealing-and-tensor-networks/blob/fbd2cd590756a2154817d6405cd636d452433619/Visualizations/project_overview.pdf)
+![Overview](https://github.com/MiquelAlberti2/Quantum-annealing-and-tensor-networks/blob/fbd2cd590756a2154817d6405cd636d452433619/Visualizations/project_overview.png)
 
 This repository contains the code for my Bachelor's thesis, which explores the application of quantum annealing and tensor networks to solve the Quadratic Knapsack Problem (QKP). For detailed information about the project, refer to the main thesis document `thesis.pdf`; for a broader overview, see `thesis_presentation.pdf`.
 
