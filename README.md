@@ -1,4 +1,5 @@
 ## Quantum Annealing and Tensor Networks: a Powerful Combination to Solve Optimization Problems
+https://arxiv.org/abs/2412.05595
 
 ![Overview](https://github.com/MiquelAlberti2/Quantum-annealing-and-tensor-networks/blob/aebd7ed56cd7f887a3126a6a75ad3bc51c9d39aa/Visualizations/project_overview.png)
 
